@@ -29,6 +29,19 @@ int musicSelector = 1; // initial music selection
 void* game () 
 {
   // PART 1: Initialize the window
+  if (SDL_Init(SDL_INIT_VIDEO) < 0) 
+  {
+    fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+    return NULL;
+  }
+
+  if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) 
+  {
+    fprintf(stderr, "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
+    SDL_Quit();
+    return NULL;
+  }
+
   SDL_Window *window;
   SDL_Renderer *renderer;
   SDL_Event event;
@@ -46,7 +59,25 @@ void* game ()
                             X_RESOLUTION * RES_SCALE, 
                             Y_RESOLUTION * RES_SCALE, 
                             SDL_WINDOW_SHOWN);
+  // make sure window runs successfully
+  if (!window) 
+  {
+    fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
+    IMG_Quit();
+    SDL_Quit();
+    return NULL;
+  }
+
   renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  if (!renderer) 
+  {
+    fprintf(stderr, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
+    SDL_DestroyWindow(window);
+    IMG_Quit();
+    SDL_Quit();
+    return NULL;
+  }
+
 
   SDL_RenderSetLogicalSize(renderer, X_RESOLUTION, Y_RESOLUTION); // resolution is 160x144
 
@@ -67,16 +98,18 @@ void* game ()
   // Load the scene textures
   SDL_Texture *wallTexture = IMG_LoadTexture(renderer, "assets/textures/world/wall_grey.png");
   SDL_Texture *floorTexture = IMG_LoadTexture(renderer, "assets/textures/world/grass_grey.jpg");
+  SDL_Texture *exitTexture = IMG_LoadTexture(renderer, "assets/textures/world/enter_pkrmrn_ctr.png");
 
-  int perllert_town_map[MAP_ROWS][MAP_COLS] = {
+  int perllert_town_map[MAP_ROWS][MAP_COLS] = 
+  {
     {1, 1, 1, 1, 1, 1, 1, 1, 0, 1}, // 1 represents a wall
     {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, // 0 represents a walkable tile
     {1, 0, 0, 0, 0, 1, 1, 0, 0, 1}, 
     {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, 
     {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, 
     {1, 0, 1, 0, 0, 0, 1, 0, 0, 1}, 
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0}, 
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 2}, 
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 2}, 
     {1, 0, 0, 1, 1, 1, 1, 1, 1, 1}, 
   };
 
@@ -98,7 +131,6 @@ void* game ()
   while (isRunning) 
   {
     // Part 3a: initialize the loop
-
     frameStart = SDL_GetTicks();
     
     // event handling
@@ -122,15 +154,22 @@ void* game ()
         SDL_Rect srcRect = {0, 0, TILE_WIDTH, TILE_HEIGHT}; // Source rectangle for the texture
         SDL_Rect destRect = {col * TILE_WIDTH, row * TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT}; // Destination rectangle on screen
 
-        if (map[row][col] == 1) 
+        switch(map[row][col])
         {
-          // Draw wall
-          SDL_RenderCopy(renderer, wallTexture, &srcRect, &destRect);
-        } 
-        else 
-        {
-          // Draw floor
-          SDL_RenderCopy(renderer, floorTexture, &srcRect, &destRect);
+          case 0:
+            // Draw floor
+            SDL_RenderCopy(renderer, floorTexture, &srcRect, &destRect);
+            break;
+          case 1:
+            // Draw wall
+            SDL_RenderCopy(renderer, wallTexture, &srcRect, &destRect);
+            break;
+          case 2:
+            // Draw exits
+            SDL_RenderCopy(renderer, exitTexture, &srcRect, &destRect);
+            break;
+          default:
+            break;
         }
       }
     }
@@ -179,12 +218,18 @@ void* game ()
       {
         int gridX = newX / TILE_WIDTH;
         int gridY = newY / TILE_HEIGHT;
-        
-        if (map[gridY][gridX] == 0)
+
+        switch(map[gridY][gridX])
         {
-          // ensure the character is within map bounds;
-          x = newX;
-          y = newY;
+          case 0:
+          case 2:
+            // ensure the character is within map bounds;
+            x = newX;
+            y = newY;
+            break;
+          case 1:
+          default:
+            break;
         }
       }
 
@@ -226,11 +271,12 @@ void* game ()
   SDL_DestroyTexture(sprite);
   SDL_DestroyTexture(wallTexture);
   SDL_DestroyTexture(floorTexture);
+  SDL_DestroyTexture(exitTexture);
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);
   IMG_Quit();
-  SDL_Quit();
-
+  
+  
   musicSelector = -1;
   return NULL;
 }
@@ -304,15 +350,14 @@ void* music()
 }
 
 int main () //(int argc, char* argv[])
-{ 
+{
   pthread_t threads[2];
 
   pthread_create(&threads[0], NULL, game, NULL);
-  //pthread_create(&threads[1], NULL, music, NULL);
+  pthread_create(&threads[1], NULL, music, NULL);
 
   pthread_join(threads[0], NULL);
-  //pthread_join(threads[1], NULL);
+  pthread_join(threads[1], NULL);
 
   return 0;
-
 }
