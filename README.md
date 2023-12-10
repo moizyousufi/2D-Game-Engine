@@ -13,7 +13,9 @@ sudo apt-get install libsdl2-dev
 sudo apt-get install libsdl2-image-dev
 sudo apt-get install libsdl2-mixer-dev
 ```
-From there, download the game engine files and run:
+From there, download the game engine files. If it is in a zip file, then extract that into its own folder.
+
+Using `cd`, navigate to the folder containing `game.c` and `makefile` and run:
 
 ```
 make
