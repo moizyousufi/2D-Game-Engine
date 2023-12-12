@@ -6,6 +6,7 @@
 #include <SDL_image.h> // make sure to include the SDL_image library for sprites
 #include <SDL2/SDL_mixer.h> // includes the SDL audio mixer
 #include <pthread.h>
+#include <sys/stat.h> // for mkdir
 
 // macros for commonly used values to make easier readability
 #define TILE_WIDTH 16
@@ -36,9 +37,57 @@ GameState currentGameState = GAME;
 typedef enum { SAVE, LOAD, EXIT } MenuState;
 MenuState currentMenuState = SAVE;
 
+/**
+ * This function will save the game state to a file
+ * 
+ * @param x the x position of the player
+ * @param y the y position of the player
+ * @param currentMap the current map that the player is on
+ * @param musicSelector the current music that is playing
+ * 
+ * @return void
+ */
+void saveGame (int x, int y, char* currentMap, int musicSelector) 
+{
+  // Try to create a directory for the save file (if it doesn't exist)
+  // this works because mkdir doesn't do anything if the directory already exists
+  mkdir("save_data", 0777); // 0777 permissions mean everyone can read/write/execute
+
+  // open file from the directory
+  // this will create the file if it doesn't exist
+  FILE *saveFile = fopen("save_data/save.txt", "w");
+  if (saveFile == NULL) 
+  {
+      fprintf(stderr, "Error opening or creating save file!\n");
+      return;
+  }
+
+  // save the current map
+  fprintf(saveFile, "map: %s\n", currentMap);
+
+  // save the music state
+  fprintf(saveFile, "music: %d\n", musicSelector);
+
+  // convert the player's position to grid coordinates and save
+  int gridX = (x - X_OFFSET) / TILE_WIDTH;
+  int gridY = y / TILE_HEIGHT;
+  fprintf(saveFile, "xpos: %d\n", gridX);
+  fprintf(saveFile, "ypos: %d\n", gridY);
+
+  fclose(saveFile);
+}
+
+// CITATION: ChatGPT helped me with learning SDL and SDL_image
+// prompt given: can you teach me about using the sdl library in c
+/**
+ * This thread function will run the game
+ * 
+ * @return void
+ */
 void* game () 
 {
   /******* PART 1: Initialize the window *******/
+  // error checking for SDL and SDL_image
   if (SDL_Init(SDL_INIT_VIDEO) < 0) 
   {
     fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
@@ -52,6 +101,7 @@ void* game ()
     return NULL;
   }
 
+  // declare the window and renderer
   SDL_Window *window;
   SDL_Renderer *renderer;
   SDL_Event event;
@@ -78,6 +128,7 @@ void* game ()
     return NULL;
   }
   renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  // make sure renderer runs successfully
   if (!renderer) 
   {
     fprintf(stderr, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
@@ -87,12 +138,11 @@ void* game ()
     return NULL;
   }
 
+  // set up the render to match our desired resolution
   SDL_RenderSetLogicalSize(renderer, X_RESOLUTION, Y_RESOLUTION); // resolution is 160x144
 
-
-
   /******* Part 2: Initialize the framerate, load the textures, and set up the maps *******/
-  const int frameDelay = 1000 / FPS;
+  const int frameDelay = 1000 / FPS; // frame delay for 60 fps and making sure CPU does not run 100%
   Uint32 frameStart;
   int frameTime;
 
@@ -101,17 +151,15 @@ void* game ()
   // Load the menu textures
   SDL_Texture *menuSave = IMG_LoadTexture(renderer, "assets/textures/menu/menu_save.png");
   SDL_Texture *menuLoad = IMG_LoadTexture(renderer, "assets/textures/menu/menu_load.png");
+  SDL_Texture *menuLoadError = IMG_LoadTexture(renderer, "assets/textures/menu/menu_load_error.png");
   SDL_Texture *menuExit = IMG_LoadTexture(renderer, "assets/textures/menu/menu_exit.png");
-
-  // store the menu textures onto an array for easier access
-  //SDL_Texture *menuTextures[MENU_ITEM_COUNT] = {menuSave, menuLoad, menuExit};
 
   // Load the sprite image
   SDL_Texture *sprite = IMG_LoadTexture(renderer, "assets/textures/characters/mc.png");
   
-  // Load the scene textures
+  // Load ALL the scene textures
   SDL_Texture *wallTexture = IMG_LoadTexture(renderer, "assets/textures/world/wall_grey.png");
-  SDL_Texture *floorTexture = IMG_LoadTexture(renderer, "assets/textures/world/grass_grey.jpg");
+  SDL_Texture *floorTexture = IMG_LoadTexture(renderer, "assets/textures/world/grass_grey.png");
   SDL_Texture *perllertRightExitTexture = IMG_LoadTexture(renderer, "assets/textures/world/enter_pkrmrn_ctr.png");
   
   SDL_Texture *pkrmrnLeftExitTexture = IMG_LoadTexture(renderer, "assets/textures/world/enter_perllert_town.png");
@@ -125,6 +173,7 @@ void* game ()
   SDL_Texture *ctrWall3 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall3.png");
   SDL_Texture *ctrWall4 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall4.png");
 
+  // set up the perllert town map
   int perllert_town_map[MAP_ROWS][MAP_COLS] = 
   {
     {1, 1, 1, 1, 1, 1, 1, 1, 0, 1}, // 1 represents a wall
@@ -138,6 +187,7 @@ void* game ()
     {1, 0, 0, 1, 1, 1, 1, 1, 1, 1}, 
   };
 
+  // set up the perkemern center map
   int pkrmrn_ctr_map[MAP_ROWS][MAP_COLS] = 
   {
     {9, 11, 11, 11, 9, 9, 11, 11, 11, 9}, 
@@ -151,7 +201,12 @@ void* game ()
     {6, 7,  6,  7,  6, 7, 6,  7,  6,  7}, 
   };
 
+  // set up the map variable and its naming convention
   int map[MAP_ROWS][MAP_COLS];
+  char* currentMapName = "perllert_town_map";
+
+  // set up the load error variable for save handling
+  bool loadError = false;
 
   // Copy the map from the array to the map variable
   for (int i = 0; i < MAP_ROWS; ++i)
@@ -163,6 +218,7 @@ void* game ()
   }
 
   musicSelector = 1; // start with perllert town music
+  int chooseMap = 1; // determine which map to load, start with perllert town map
 
   /******* Part 3: Setup the game loop and main logic *******/
   while (isRunning) 
@@ -179,6 +235,7 @@ void* game ()
         case SDL_QUIT:
           isRunning = 0;
           break;
+        // handle key press from user
         case SDL_KEYDOWN:
           switch(event.key.keysym.sym)
           {
@@ -186,26 +243,157 @@ void* game ()
             case SDLK_RETURN:
               switch(currentGameState)
               {
+                // consider when we are dealing with the menu
                 case MENU:
+                  /***** Part 3b: handle the save system *****/
                   switch (currentMenuState)
                   {
+                    // handle save case
                     case SAVE:
-                      printf("we've saved the game\n");
-                      // save the game
+                      // save the game by calling our saveGame function
+                      saveGame(x, y, currentMapName, musicSelector);
                       break;
-                    case LOAD:
-                      printf("we've loaded the game\n");
-                      // load the game
-                      break;
+                    // handle exit menu case
                     case EXIT:
-                      // exit the menu
+                      // simply change the game state to exit the game
                       currentGameState = GAME;
+                      break;
+                    // handle load case
+                    case LOAD:
+                      // check to see whether we are in the load error state or not
+                      if (loadError) 
+                      {
+                        currentMenuState = LOAD;
+                        loadError = false;
+                        break;
+                      }
+
+                      // load the game
+                      FILE* saveFile = fopen("save_data/save.txt", "r");
+                      char line[100]; // Array to hold each line of the file
+
+                      // Check if the file exists
+                      if (saveFile == NULL) 
+                      {
+                        loadError = true;
+                        break;
+                      }
+
+                      // Read the file line by line
+                      while (fgets(line, sizeof(line), saveFile) != NULL) 
+                      {
+                        // set up our checks in the save file
+                        char mapPrefix[] = "map: ";
+                        char musicPrefix[] = "music: ";
+                        char xposPrefix[] = "xpos: ";
+                        char yposPrefix[] = "ypos: ";
+
+                        // check to see if the line is a map line
+                        if(strncmp(mapPrefix, line, strlen(mapPrefix)) == 0)
+                        {
+                          // ensure that the line has a value
+                          if(strlen(line) <= strlen(mapPrefix))
+                          {
+                            loadError = true;
+                            printf("map prefix has no value\n");
+                            break;
+                          }
+
+                          // we will select the map based on the string after the prefix
+                          char* mapChoice = line + strlen(mapPrefix);
+                          
+                          // now we have the map choice, we can change the map variable
+                          // 18 is the number of characters in "perllert_town_map", not magic number
+                          for (int i = 0; i < MAP_ROWS; ++i)
+                          {
+                            for (int j = 0; j < MAP_COLS; ++j)
+                            {
+                              // we will select the map based on the value after the prefix
+                              if (strncmp("perllert_town_map", mapChoice, strlen("perllert_town_map")) == 0)
+                              {
+                                map[i][j] = perllert_town_map[i][j];
+                                chooseMap = 1;
+                              }
+                              else if (strncmp("pkrmrn_ctr_map", mapChoice, strlen("pkrmrn_ctr_map")) == 0)
+                              {
+                                map[i][j] = pkrmrn_ctr_map[i][j];
+                                chooseMap = 2;
+                              }
+                            }
+                          }
+                        }
+                        // check to see if the line is a music line
+                        else if(strncmp(musicPrefix, line, strlen(musicPrefix)) == 0)
+                        {
+                          // ensure that the line has a value
+                          if(strlen(line) <= strlen(musicPrefix))
+                          {
+                            loadError = true;
+                            printf("music prefix has no value\n");
+                            break;
+                          }
+
+                          char musicChoice[100];
+                          for (int i = (int) strlen(musicPrefix); i < (int) strlen(line) - 1; ++i)
+                          {                    
+                            // we will select the music based on the value after the prefix
+                            musicChoice[i - strlen(musicPrefix)] = line[i];
+                          }
+
+                          musicSelector = atoi(musicChoice);
+                        }
+                        // check to see if the line is an xpos line
+                        else if(strncmp(xposPrefix, line, strlen(xposPrefix)) == 0)
+                        {
+                          // ensure that the line has a value
+                          if(strlen(line) <= strlen(xposPrefix))
+                          {
+                            loadError = true;
+                            printf("xpos prefix has no value\n");
+                            break;
+                          }
+
+                          char xChoice[100];
+                          for (int i = (int) strlen(xposPrefix); i < (int) strlen(line) - 1; ++i)
+                          {
+                            // we will select the x pos based on the value after the prefix
+                            xChoice[i - strlen(xposPrefix)] = line[i];
+                          }
+                          // reading in xpos
+                          x = atoi(xChoice) * TILE_WIDTH + X_OFFSET;
+
+                        }
+                        // check to see if the line is a ypos line
+                        else if(strncmp(yposPrefix, line, strlen(yposPrefix)) == 0)
+                        {
+                          // ensure that the line has a value
+                          if(strlen(line) <= strlen(yposPrefix))
+                          {
+                            loadError = true;
+                            printf("ypos prefix has no value\n");
+                            break;
+                          }
+
+                          char yChoice[100];
+                          for (int i = (int) strlen(yposPrefix); i < (int) strlen(line) - 1; ++i)
+                          {
+                            // we will select the x pos based on the value after the prefix
+                            yChoice[i - strlen(yposPrefix)] = line[i];
+                          }
+                          // reading in ypos
+                          y = atoi(yChoice) * TILE_HEIGHT;
+                        }
+                      }
+                      // close the file for safety
+                      fclose(saveFile);
                       break;
                     default:
                       break;
                   }
                   break;
+                // consider when we are dealing with the game
                 case GAME:
+                  // simply change to the menu state
                   currentGameState = MENU;
                   currentMenuState = SAVE;
                   break;
@@ -215,14 +403,14 @@ void* game ()
               break;
             // handle 'up' input for switching between menu options
             case SDLK_w:
-              if (currentMenuState > 0) 
+              if (currentMenuState > 0 && !loadError) 
               {
                 --currentMenuState;
               }
               break;
             // handle 'down' input for switching between menu options
             case SDLK_s:
-              if (currentMenuState < MENU_ITEM_COUNT - 1) 
+              if (currentMenuState < MENU_ITEM_COUNT - 1 && !loadError) 
               {
                 ++currentMenuState;
               }
@@ -240,15 +428,17 @@ void* game ()
     // Render the scene based on the current state
     switch(currentGameState) 
     {
+      // render the menu case
       case MENU:
-        // show the appropriate menu
+        // simply show the appropriate menu
         switch(currentMenuState)
         {
           case SAVE:
             SDL_RenderCopy(renderer, menuSave, NULL, NULL);
             break;
           case LOAD:
-            SDL_RenderCopy(renderer, menuLoad, NULL, NULL);
+            if(loadError) SDL_RenderCopy(renderer, menuLoadError, NULL, NULL);
+            else SDL_RenderCopy(renderer, menuLoad, NULL, NULL);
             break;
           case EXIT:
             SDL_RenderCopy(renderer, menuExit, NULL, NULL);
@@ -257,8 +447,9 @@ void* game ()
             break;
         }
         break;
+      // render the game case
       case GAME:
-        /***** Part 3b: setup the map using the textures *****/
+        /***** Part 3c: setup the map using the textures *****/
         // this loop will render the map based on the map array
         for (int row = 0; row < MAP_ROWS; ++row) 
         {
@@ -316,35 +507,41 @@ void* game ()
           }
         }
 
-        /***** Part 3c: handle user input and acceptable time window for input *****/
+        /***** Part 3d: handle user input and acceptable time window for input *****/
         Uint32 currentTime = SDL_GetTicks();
 
+        // Check if enough time has passed since the last move
         if (currentTime - lastMoveTime >= MOVEMENT_DELAY) 
         {
           // Handle keyboard input
           const Uint8 *state = SDL_GetKeyboardState(NULL);
           int moved = 0;
 
+          // track our new coordinates
           int newX = x;
           int newY = y;
 
+          // track our grid position
           int gridX = x / TILE_WIDTH;
           int gridY = y / TILE_HEIGHT;
 
+          // track whether we need to switch maps or not
           bool switchMap = false;
-          int chooseMap = 1;
 
+          // determine which direction we are moving
           if (state[SDL_SCANCODE_W]) 
           {
+            // case we are moving up
             newY -= TILE_HEIGHT; 
             moved = 1;
           }
           else if (state[SDL_SCANCODE_A]) 
           {
+            // case we are moving left
             newX -= TILE_WIDTH;
             moved = 1;
 
-            // determine if we are at the exit point
+            // determine if we are at an exit point
             switch (map[gridY][gridX])
             {
               case 3:
@@ -366,15 +563,17 @@ void* game ()
           }
           else if (state[SDL_SCANCODE_S]) 
           {
+            // case we are moving down
             newY += TILE_HEIGHT;
             moved = 1;
           }
           else if (state[SDL_SCANCODE_D]) 
           {
+            // case we are moving right
             newX += TILE_WIDTH; 
             moved = 1;
 
-            // determine if we are at the exit point
+            // determine if we are at an exit point
             switch (map[gridY][gridX])
             {
               case 2:
@@ -393,9 +592,23 @@ void* game ()
             }
           }
 
+          // determine which map we are on, and change the currentMapName variable appropriately
+          switch(chooseMap)
+          {
+            case 1:
+              currentMapName = "perllert_town_map";
+              break;
+            case 2:
+              currentMapName = "pkrmrn_ctr_map";
+              break;
+            default:
+              break;
+          } 
+
           // determine if we need to switch maps
           if(switchMap)
           {
+            // loop through our map variable and change it to the new map
             for (int i = 0; i < MAP_ROWS; ++i)
             {
               for (int j = 0; j < MAP_COLS; ++j)
@@ -412,7 +625,7 @@ void* game ()
                     break;
                 }
               }
-            }   
+            }
 
             // apply our changed coordinates to the new map
             x = newX + X_OFFSET;
@@ -428,6 +641,7 @@ void* game ()
               newY >= 0 && 
               newY <= ((MAP_ROWS * TILE_HEIGHT) - TILE_HEIGHT))
           {
+            // determine the grid position of the new coordinates
             int newGridX = newX / TILE_WIDTH;
             int newGridY = newY / TILE_HEIGHT;
 
@@ -458,7 +672,7 @@ void* game ()
           }
         }
 
-        /***** Part 3d: Finalize changes to frame *****/
+        /***** Part 3e: Finalize changes to frame *****/
         // Render the sprite
         SDL_Rect srcRect = {0, 
                             0, 
@@ -504,10 +718,18 @@ void* game ()
   SDL_DestroyWindow(window);
   IMG_Quit(); 
   
+  // set the music selector to -1 to signal the music thread to close
   musicSelector = -1;
   return NULL;
 }
 
+// CITATION: ChatGPT helped me with learning SDL2/SDL_mixer
+// prompt given: Can you teach me how to play music using SDL
+/**
+ * This thread function will run the music
+ * 
+ * @return void
+ */
 void* music()
 {
   // Initialize SDL
@@ -517,31 +739,31 @@ void* music()
   Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
 
   // Load music tracks
-  Mix_Music *music1 = Mix_LoadMUS("assets/audio/perllert_town_music.mp3");
-  Mix_Music *music2 = Mix_LoadMUS("assets/audio/perkemern_center.mp3");
+  Mix_Music *music1 = Mix_LoadMUS("assets/audio/perllert_town_music.wav");
+  Mix_Music *music2 = Mix_LoadMUS("assets/audio/perkemern_center.wav");
   
+  bool running = true; // control variable for the main loop
 
-  bool running = true; // Control variable for the main loop
-
+  // set up a loop to keep the music playing
   while (running) 
   {
-    // Check for events or conditions that might change musicSelector
-    // Example: musicSelector = getMusicSelectionFromEvent();
-
+    // check for events or conditions that might change musicSelector
     static int currentPlaying = 0; // Keep track of what is currently playing
 
+    // see if there's been a change in music selection
     if (currentPlaying != musicSelector) 
     {
-      // Stop current music
+      // stop current music
       Mix_HaltMusic();
 
+      // delay briefly to prevent the music from starting too fast
       SDL_Delay(250);
 
       // Play new music based on musicSelector
       switch (musicSelector) 
       {
         // in -1 case, we get the signal that game thread has closed
-        // now we would want to close the music thread 
+        // now we would want to close the music thread, so we set running to false to break loop
         case -1:
           // end the looping to close the thread
           running = false;
@@ -558,6 +780,7 @@ void* music()
           break;
       }
 
+      // update the currentPlaying variable to match the musicSelector
       currentPlaying = musicSelector;
     }
 
@@ -572,18 +795,27 @@ void* music()
   return NULL;
 }
 
+/**
+ * This is the main function that will run the game by creating two threads
+ * 
+ * @return 0
+ */
 int main () //(int argc, char* argv[])
 {
+  // create two threads to run in parallel
   pthread_t threads[2];
 
+  // game thread for handling the game and user input
   pthread_create(&threads[0], NULL, game, NULL);
+  // music thread for handling the music
   pthread_create(&threads[1], NULL, music, NULL);
 
+  // join the threads to prevent the program from closing before the threads are done
   pthread_join(threads[0], NULL);
   pthread_join(threads[1], NULL);
   
   // SDL_Quit is called here to prevent a forced shutdown of the other thread
-  // That would cause concurrency issues
+  // that could potentially cause concurrency issues if we quit before thread closing
   SDL_Quit();
 
   return 0;
