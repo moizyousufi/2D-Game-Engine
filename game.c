@@ -17,9 +17,11 @@
 #define FPS 60
 #define X_RESOLUTION 160
 #define Y_RESOLUTION 144
-#define MOVEMENT_DELAY 100
+#define MOVEMENT_DELAY 150
 #define RES_SCALE 8
 #define MENU_ITEM_COUNT 3
+#define SPRITE_FRAMES 2 // the frames per direction
+#define ANIMATION_DELAY 125 // the millisecond delay between frames
 
 // I didn't want to include math.h because I was purely dealing with integers
 // instead I decided to use these trivial macros for min and maxing
@@ -75,6 +77,56 @@ void saveGame (int x, int y, char* currentMap, int musicSelector)
   fprintf(saveFile, "ypos: %d\n", gridY);
 
   fclose(saveFile);
+}
+
+// Variables for tracking character direction and state
+typedef enum { RIGHT, LEFT, UP, DOWN, IDLE_RIGHT, IDLE_LEFT, IDLE_UP, IDLE_DOWN } Direction;
+Direction characterDirection = IDLE_DOWN; // default direction
+
+// Variables for sprite animation
+int currentFrame = 0;
+Uint32 lastAnimationFrame = 0;
+int animationRowHeight = TILE_HEIGHT; // assumes that each animation is in a different row
+
+void calculateSrcRect(SDL_Rect *srcRect, Direction direction, int currentFrame) {
+    srcRect->w = TILE_WIDTH;
+    srcRect->h = TILE_HEIGHT;
+
+    // Idle frames are all in the first row, walking frames are in subsequent rows
+    switch (direction) {
+        case IDLE_RIGHT:
+            srcRect->x = 0 * TILE_WIDTH;
+            srcRect->y = 0;
+            break;
+        case IDLE_LEFT:
+            srcRect->x = 1 * TILE_WIDTH;
+            srcRect->y = 0;
+            break;
+        case IDLE_UP:
+            srcRect->x = 2 * TILE_WIDTH;
+            srcRect->y = 0;
+            break;
+        case IDLE_DOWN:
+            srcRect->x = 3 * TILE_WIDTH;
+            srcRect->y = 0;
+            break;
+        case RIGHT:
+            srcRect->x = currentFrame * TILE_WIDTH;
+            srcRect->y = 1 * TILE_HEIGHT;
+            break;
+        case LEFT:
+            srcRect->x = currentFrame * TILE_WIDTH;
+            srcRect->y = 2 * TILE_HEIGHT;
+            break;
+        case UP:
+            srcRect->x = currentFrame * TILE_WIDTH;
+            srcRect->y = 3 * TILE_HEIGHT;
+            break;
+        case DOWN:
+            srcRect->x = currentFrame * TILE_WIDTH;
+            srcRect->y = 4 * TILE_HEIGHT;
+            break;
+    }
 }
 
 // CITATION: ChatGPT helped me with learning SDL and SDL_image
@@ -418,8 +470,6 @@ void* game ()
           }
           break;
       }
-
-      
     }
     
     // Clear the renderer
@@ -528,15 +578,24 @@ void* game ()
           // track whether we need to switch maps or not
           bool switchMap = false;
 
+          // animation setup
+          Uint32 currentTime = SDL_GetTicks();
+
           // determine which direction we are moving
           if (state[SDL_SCANCODE_W]) 
           {
+            // update animation variables
+            characterDirection = UP;
+
             // case we are moving up
             newY -= TILE_HEIGHT; 
             moved = 1;
           }
           else if (state[SDL_SCANCODE_A]) 
           {
+            // update animation variables
+            characterDirection = LEFT;
+
             // case we are moving left
             newX -= TILE_WIDTH;
             moved = 1;
@@ -563,12 +622,18 @@ void* game ()
           }
           else if (state[SDL_SCANCODE_S]) 
           {
+            // update animation variables
+            characterDirection = DOWN;
+
             // case we are moving down
             newY += TILE_HEIGHT;
             moved = 1;
           }
           else if (state[SDL_SCANCODE_D]) 
           {
+            // update animation variables
+            characterDirection = RIGHT;
+
             // case we are moving right
             newX += TILE_WIDTH; 
             moved = 1;
@@ -590,6 +655,29 @@ void* game ()
                 musicSelector = 2;
                 break;
             }
+          }
+
+          // Reset to idle state if no movement keys are pressed
+          if (!(state[SDL_SCANCODE_W] || state[SDL_SCANCODE_A] || state[SDL_SCANCODE_S] || state[SDL_SCANCODE_D]))
+          {
+              currentFrame = 0; // reset animation frame for idle
+              switch(characterDirection)
+              {
+                case UP:
+                  characterDirection = IDLE_UP;
+                  break;
+                case LEFT:
+                  characterDirection = IDLE_LEFT;
+                  break;
+                case DOWN:
+                  characterDirection = IDLE_DOWN;
+                  break;
+                case RIGHT:
+                  characterDirection = IDLE_RIGHT;
+                  break;
+                default:
+                  break;
+              }
           }
 
           // determine which map we are on, and change the currentMapName variable appropriately
@@ -672,12 +760,30 @@ void* game ()
           }
         }
 
+        
+
         /***** Part 3e: Finalize changes to frame *****/
+
+        if (characterDirection != IDLE_RIGHT && characterDirection != IDLE_LEFT && 
+            characterDirection != IDLE_UP && characterDirection != IDLE_DOWN) 
+        {
+          // Update the frame if the character is not idle
+          if (currentTime - lastAnimationFrame >= ANIMATION_DELAY) 
+          {
+            currentFrame = (currentFrame + 1) % SPRITE_FRAMES;
+            lastAnimationFrame = currentTime;
+          }
+        } 
+        else 
+        {
+          // Reset to the first frame when idle
+          currentFrame = 0;
+        }
+        
+        SDL_Rect srcRect;
+        calculateSrcRect(&srcRect, characterDirection, currentFrame);
+
         // Render the sprite
-        SDL_Rect srcRect = {0, 
-                            0, 
-                            TILE_WIDTH, 
-                            TILE_HEIGHT}; // Assuming the sprite is 64x64 pixels and we want spawn at the center
         SDL_Rect destRect = {x - X_OFFSET, // for whatever reason, the sprite has an off by 8 issue, so I just fix it here
                             y, 
                             TILE_WIDTH, 
@@ -698,6 +804,11 @@ void* game ()
   }
 
   /******* Part 4: Cleanup *******/
+  SDL_DestroyTexture(menuSave);
+  SDL_DestroyTexture(menuLoad);
+  SDL_DestroyTexture(menuLoadError);
+  SDL_DestroyTexture(menuExit);
+
   SDL_DestroyTexture(sprite);
   SDL_DestroyTexture(wallTexture);
   SDL_DestroyTexture(floorTexture);
