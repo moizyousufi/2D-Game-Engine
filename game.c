@@ -31,6 +31,11 @@
 // global variable that will allow our threads to sync properly
 int musicSelector = 0; // initial music selection
 
+// Variables for sprite animation
+int currentFrame = 0;
+Uint32 lastAnimationFrame = 0;
+int animationRowHeight = TILE_HEIGHT; // assumes that each animation is in a different row
+
 // this will set up for our start menu
 typedef enum { MENU, GAME } GameState;
 GameState currentGameState = GAME;
@@ -38,6 +43,10 @@ GameState currentGameState = GAME;
 // This will set up our menu options
 typedef enum { SAVE, LOAD, EXIT } MenuState;
 MenuState currentMenuState = SAVE;
+
+// Variables for tracking character direction and state
+typedef enum { RIGHT, LEFT, UP, DOWN, IDLE_RIGHT, IDLE_LEFT, IDLE_UP, IDLE_DOWN } Direction;
+Direction characterDirection = IDLE_DOWN; // default direction
 
 /**
  * This function will save the game state to a file
@@ -79,15 +88,15 @@ void saveGame (int x, int y, char* currentMap, int musicSelector)
   fclose(saveFile);
 }
 
-// Variables for tracking character direction and state
-typedef enum { RIGHT, LEFT, UP, DOWN, IDLE_RIGHT, IDLE_LEFT, IDLE_UP, IDLE_DOWN } Direction;
-Direction characterDirection = IDLE_DOWN; // default direction
-
-// Variables for sprite animation
-int currentFrame = 0;
-Uint32 lastAnimationFrame = 0;
-int animationRowHeight = TILE_HEIGHT; // assumes that each animation is in a different row
-
+/**
+ * This function will calculate the source rectangle for the sprite animation
+ * 
+ * @param srcRect the source rectangle for the sprite
+ * @param direction the direction that the sprite is facing
+ * @param currentFrame the current frame of the sprite animation
+ * 
+ * @return void
+ */
 void calculateSrcRect(SDL_Rect *srcRect, Direction direction, int currentFrame) {
     srcRect->w = TILE_WIDTH;
     srcRect->h = TILE_HEIGHT;
@@ -160,7 +169,6 @@ void* game ()
   int isRunning = 1, 
       x = (X_RESOLUTION - TILE_WIDTH) / 2, 
       y = (Y_RESOLUTION - TILE_HEIGHT) / 2;
-
   
   // resolution is scaled 8x higher than what will be rendered (1280x1152 screen for 160x144 game)
   window = SDL_CreateWindow("Perkemerrrrrrnnnnnnn", 
@@ -196,7 +204,6 @@ void* game ()
   /******* Part 2: Initialize the framerate, load the textures, and set up the maps *******/
   const int frameDelay = 1000 / FPS; // frame delay for 60 fps and making sure CPU does not run 100%
   Uint32 frameStart;
-  int frameTime;
 
   Uint32 lastMoveTime = 0; // Time of the last movement
 
@@ -760,10 +767,7 @@ void* game ()
           }
         }
 
-        
-
         /***** Part 3e: Finalize changes to frame *****/
-
         if (characterDirection != IDLE_RIGHT && characterDirection != IDLE_LEFT && 
             characterDirection != IDLE_UP && characterDirection != IDLE_DOWN) 
         {
@@ -796,7 +800,7 @@ void* game ()
     SDL_RenderPresent(renderer);
 
     // Framerate control
-    frameTime = SDL_GetTicks() - frameStart;
+    int frameTime = SDL_GetTicks() - frameStart;
     if (frameDelay > frameTime) 
     {
       SDL_Delay(frameDelay - frameTime);
@@ -868,7 +872,7 @@ void* music()
       Mix_HaltMusic();
 
       // delay briefly to prevent the music from starting too fast
-      SDL_Delay(250);
+      SDL_Delay(20);
 
       // Play new music based on musicSelector
       switch (musicSelector) 
