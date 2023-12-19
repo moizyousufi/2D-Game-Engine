@@ -1,0 +1,4 @@
+map: perllert_town_map
+music: 1
+xpos: 4
+ypos: 5
