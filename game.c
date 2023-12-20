@@ -23,7 +23,7 @@
 #define SPRITE_FRAMES 2 // the frames per direction
 #define ANIMATION_DELAY 125 // the millisecond delay between frames
 #define FRAME_DELAY 1000 / FPS // frame delay for 60 fps and making sure CPU does not run 100%
-#define NUM_TEXTURES 12 // the number of textures that we will be using
+#define MAX_GAME_TEXTURES 1000 // maximum number of textures that can be loaded for the game
 
 // I didn't want to include math.h because I was purely dealing with integers
 // instead I decided to use these trivial macros for min and maxing
@@ -59,11 +59,15 @@ typedef struct
 
 typedef struct 
 {
-    SDL_Texture *textures[NUM_TEXTURES]; // Define NUM_TEXTURES as needed
+    SDL_Texture **textures; // double pointer to an array of textures based on the map
     int map[MAP_ROWS][MAP_COLS];
 } GameMap;
 
-
+/**
+ * This function will initialize SDL and SDL_image
+ * 
+ * @return void
+*/
 void initSDL () 
 {
   // error checking for SDL and SDL_image
@@ -81,6 +85,14 @@ void initSDL ()
   }
 }
 
+/**
+ * This function will set up the window and renderer
+ * 
+ * @param window the window that will be set up
+ * @param renderer the renderer that will be set up
+ * 
+ * @return void
+ */
 void setupWindow (SDL_Window** window, SDL_Renderer** renderer) 
 {
   // resolution is scaled 8x higher than what will be rendered (1280x1152 screen for 160x144 game)
@@ -115,7 +127,51 @@ void setupWindow (SDL_Window** window, SDL_Renderer** renderer)
   SDL_RenderSetLogicalSize(*renderer, X_RESOLUTION, Y_RESOLUTION); // resolution is 160x144
 }
 
+/**
+ * This function will load the textures for the game
+ * 
+ * @param textures the array of textures to be loaded
+ * @param renderer the renderer that will be used to load the textures
+ * 
+ * @return int the number of textures loaded
+ */
+int loadTextures (SDL_Texture** textures, SDL_Renderer** renderer) 
+{
+  // load the textures for the game
+  int i = 0;
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/grass_grey.png");
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/wall_grey.png");
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/enter_pkrmrn_ctr.png");
+    
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/enter_perllert_town.png");
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/ctr_tile_top_right.png");
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/ctr_tile_top_left.png");
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/ctr_tile_bottom_right.png");
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/ctr_tile_bottom_left.png");
+    
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/ctr_wall1.png");
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/ctr_wall2.png");
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/ctr_wall3.png");
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/ctr_wall4.png");
 
+  return i;
+}
+
+/**
+ * This function will destroy the textures for the game
+ * 
+ * @param textures the array of textures to be destroyed
+ * @param textureCount the number of textures to be destroyed
+ * 
+ * @return void
+ */
+void destroyTextures (SDL_Texture** textures, int textureCount) 
+{
+  for (int i = 0; i < textureCount; ++i) 
+  {
+    SDL_DestroyTexture(textures[i]);
+  }
+}
 
 /**
  * This function will save the game state to a file
@@ -235,8 +291,6 @@ void* game ()
                           IDLE_DOWN, // default direction
                           IMG_LoadTexture(renderer, "assets/textures/characters/mc.png")}; // default texture
 
-
-
   /******* Part 2: Initialize the framerate, load the textures, and set up the maps *******/
   Uint32 frameStart; // Time at the start of the frame
   Uint32 lastMoveTime = 0; // Time of the last movement
@@ -246,26 +300,10 @@ void* game ()
   SDL_Texture *menuLoad = IMG_LoadTexture(renderer, "assets/textures/menu/menu_load.png");
   SDL_Texture *menuLoadError = IMG_LoadTexture(renderer, "assets/textures/menu/menu_load_error.png");
   SDL_Texture *menuExit = IMG_LoadTexture(renderer, "assets/textures/menu/menu_exit.png");
-  
-  // Load ALL the scene textures
-  SDL_Texture *wallTexture, *floorTexture, *perllertRightExitTexture, *pkrmrnLeftExitTexture, 
-              *ctrTopRight, *ctrTopLeft, *ctrBottomRight, *ctrBottomLeft, *ctrWall1, *ctrWall2, 
-              *ctrWall3, *ctrWall4; 
 
-  wallTexture = IMG_LoadTexture(renderer, "assets/textures/world/wall_grey.png");
-  floorTexture = IMG_LoadTexture(renderer, "assets/textures/world/grass_grey.png");
-  perllertRightExitTexture = IMG_LoadTexture(renderer, "assets/textures/world/enter_pkrmrn_ctr.png");
-    
-  pkrmrnLeftExitTexture = IMG_LoadTexture(renderer, "assets/textures/world/enter_perllert_town.png");
-  ctrTopRight = IMG_LoadTexture(renderer, "assets/textures/world/ctr_tile_top_right.png");
-  ctrTopLeft = IMG_LoadTexture(renderer, "assets/textures/world/ctr_tile_top_left.png");
-  ctrBottomRight = IMG_LoadTexture(renderer, "assets/textures/world/ctr_tile_bottom_right.png");
-  ctrBottomLeft = IMG_LoadTexture(renderer, "assets/textures/world/ctr_tile_bottom_left.png");
-    
-  ctrWall1 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall1.png");
-  ctrWall2 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall2.png");
-  ctrWall3 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall3.png");
-  ctrWall4 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall4.png");
+  // Load ALL the scene textures
+  SDL_Texture *gameTextures[MAX_GAME_TEXTURES];
+  int textureCount = loadTextures(gameTextures, &renderer);
 
   // set up the perllert town map
   int perllert_town_map[MAP_ROWS][MAP_COLS] = 
@@ -551,51 +589,7 @@ void* game ()
             SDL_Rect destRect = {col * TILE_WIDTH, row * TILE_HEIGHT, TILE_WIDTH, TILE_HEIGHT}; // Destination rectangle on screen
 
             // Render the texture based on the map value
-            switch(map[row][col])
-            {
-              case 0:
-                // Draw floor
-                SDL_RenderCopy(renderer, floorTexture, &srcRect, &destRect);
-                break;
-              case 1:
-                // Draw wall
-                SDL_RenderCopy(renderer, wallTexture, &srcRect, &destRect);
-                break;
-              case 2:
-                // Draw right perllert town exit
-                SDL_RenderCopy(renderer, perllertRightExitTexture, &srcRect, &destRect);
-                break;
-              case 3:
-                // Draw left pkrmrn ctr exit
-                SDL_RenderCopy(renderer, pkrmrnLeftExitTexture, &srcRect, &destRect);
-                break;
-              case 4:
-                SDL_RenderCopy(renderer, ctrTopRight, &srcRect, &destRect);
-                break;
-              case 5:
-                SDL_RenderCopy(renderer, ctrTopLeft, &srcRect, &destRect);
-                break;
-              case 6:
-                SDL_RenderCopy(renderer, ctrBottomRight, &srcRect, &destRect);
-                break;
-              case 7:
-                SDL_RenderCopy(renderer, ctrBottomLeft, &srcRect, &destRect);
-                break;
-              case 8:
-                SDL_RenderCopy(renderer, ctrWall1, &srcRect, &destRect);
-                break;
-              case 9:
-                SDL_RenderCopy(renderer, ctrWall2, &srcRect, &destRect);
-                break;
-              case 10:
-                SDL_RenderCopy(renderer, ctrWall3, &srcRect, &destRect);
-                break;
-              case 11:
-                SDL_RenderCopy(renderer, ctrWall4, &srcRect, &destRect);
-                break;
-              default:
-                break;
-            }
+            SDL_RenderCopy(renderer, gameTextures[map[row][col]], &srcRect, &destRect);    
           }
         }
 
@@ -850,20 +844,7 @@ void* game ()
   SDL_DestroyTexture(menuLoadError);
   SDL_DestroyTexture(menuExit);
 
-  SDL_DestroyTexture(wallTexture);
-  SDL_DestroyTexture(floorTexture);
-  SDL_DestroyTexture(perllertRightExitTexture);
-  SDL_DestroyTexture(pkrmrnLeftExitTexture);
-
-  SDL_DestroyTexture(ctrTopRight);
-  SDL_DestroyTexture(ctrTopLeft);
-  SDL_DestroyTexture(ctrBottomRight);
-  SDL_DestroyTexture(ctrBottomLeft);
-
-  SDL_DestroyTexture(ctrWall1);
-  SDL_DestroyTexture(ctrWall2);
-  SDL_DestroyTexture(ctrWall3);
-  SDL_DestroyTexture(ctrWall4);
+  destroyTextures(gameTextures, textureCount);
 
   SDL_DestroyRenderer(renderer); 
   SDL_DestroyWindow(window);
