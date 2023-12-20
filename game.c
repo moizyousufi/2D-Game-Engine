@@ -14,7 +14,7 @@
 #define X_OFFSET 8
 #define MAP_ROWS 9
 #define MAP_COLS 10
-#define FPS 60
+#define FPS 120
 #define X_RESOLUTION 160
 #define Y_RESOLUTION 144
 #define MOVEMENT_DELAY 150
@@ -171,7 +171,7 @@ void destroyTextures (SDL_Texture** textures, int textureCount)
 }
 
 // Function to load the map
-void LoadMap(int map[MAP_ROWS][MAP_COLS], MapType mapType) 
+void loadMap(int map[MAP_ROWS][MAP_COLS], MapType mapType) 
 {
   switch (mapType) 
   {
@@ -190,7 +190,7 @@ void LoadMap(int map[MAP_ROWS][MAP_COLS], MapType mapType)
         {1, 0, 0, 0, 0, 0, 0, 0, 0, 2}, 
         {1, 0, 0, 1, 1, 1, 1, 1, 1, 1}, 
       };
-      memcpy(map, perllert_town_map, sizeof(perllert_town_map));
+      memmove(map, perllert_town_map, sizeof(perllert_town_map));
       break;
     }
     case PKRMN_CTR:
@@ -208,7 +208,7 @@ void LoadMap(int map[MAP_ROWS][MAP_COLS], MapType mapType)
         {3, 5,  4,  5,  4, 5, 4,  5,  4,  5}, 
         {6, 7,  6,  7,  6, 7, 6,  7,  6,  7}, 
       };
-      memcpy(map, pkrmrn_ctr_map, sizeof(pkrmrn_ctr_map));
+      memmove(map, pkrmrn_ctr_map, sizeof(pkrmrn_ctr_map));
       break;
     }
   }
@@ -252,6 +252,196 @@ void saveGame (int x, int y, char* currentMap, int musicSelector)
   fprintf(saveFile, "ypos: %d\n", gridY);
 
   fclose(saveFile);
+}
+
+void HandleEvents(int* isRunning, GameState* currentGameState, MenuState* currentMenuState, Player* player, bool* loadError, SDL_Event* event, char* currentMapName, int map[MAP_ROWS][MAP_COLS], int* chooseMap) 
+{
+  // event handling
+    while (SDL_PollEvent(event)) 
+    {
+      switch((*event).type)
+      {
+        // handle quit event
+        case SDL_QUIT:
+          *isRunning = 0;
+          break;
+        // handle key press from user
+        case SDL_KEYDOWN:
+          switch((*event).key.keysym.sym)
+          {
+            // handle 'enter' input for switching between game and menu
+            case SDLK_RETURN:
+              switch(*currentGameState)
+              {
+                // consider when we are dealing with the menu
+                case MENU:
+                  /***** Part 3b: handle the save system *****/
+                  switch (*currentMenuState)
+                  {
+                    // handle save case
+                    case SAVE:
+                      // save the game by calling our saveGame function
+                      saveGame((*player).x, (*player).y, currentMapName, musicSelector);
+                      break;
+                    // handle exit menu case
+                    case EXIT:
+                      // simply change the game state to exit the game
+                      *currentGameState = GAME;
+                      break;
+                    // handle load case
+                    case LOAD:
+                      // check to see whether we are in the load error state or not
+                      if (*loadError) 
+                      {
+                        *currentMenuState = LOAD;
+                        *loadError = false;
+                        break;
+                      }
+
+                      // load the game
+                      FILE* saveFile = fopen("save_data/save.txt", "r");
+                      char line[100]; // Array to hold each line of the file
+
+                      // Check if the file exists
+                      if (saveFile == NULL) 
+                      {
+                        *loadError = true;
+                        break;
+                      }
+
+                      // Read the file line by line
+                      while (fgets(line, sizeof(line), saveFile) != NULL) 
+                      {
+                        // set up our checks in the save file
+                        char mapPrefix[] = "map: ";
+                        char musicPrefix[] = "music: ";
+                        char xposPrefix[] = "xpos: ";
+                        char yposPrefix[] = "ypos: ";
+
+                        // check to see if the line is a map line
+                        if(strncmp(mapPrefix, line, strlen(mapPrefix)) == 0)
+                        {
+                          // ensure that the line has a value
+                          if(strlen(line) <= strlen(mapPrefix))
+                          {
+                            *loadError = true;
+                            printf("map prefix has no value\n");
+                            break;
+                          }
+
+                          // we will select the map based on the string after the prefix
+                          char* mapChoice = line + strlen(mapPrefix);
+                          
+                          // now we have the map choice, we can change the map variable
+                          // 18 is the number of characters in "perllert_town_map", not magic number
+                          if(strncmp("perllert_town_map", mapChoice, strlen("perllert_town_map")) == 0)
+                          {
+                            loadMap(map, PERLLERT_TOWN);
+                            *chooseMap = 1;
+                          }
+                          else if(strncmp("pkrmrn_ctr_map", mapChoice, strlen("pkrmrn_ctr_map")) == 0)
+                          {
+                            loadMap(map, PKRMN_CTR);
+                            *chooseMap = 2;
+                          }
+                        }
+                        // check to see if the line is a music line
+                        else if(strncmp(musicPrefix, line, strlen(musicPrefix)) == 0)
+                        {
+                          // ensure that the line has a value
+                          if(strlen(line) <= strlen(musicPrefix))
+                          {
+                            *loadError = true;
+                            printf("music prefix has no value\n");
+                            break;
+                          }
+
+                          char musicChoice[100];
+                          for (int i = (int) strlen(musicPrefix); i < (int) strlen(line) - 1; ++i)
+                          {                    
+                            // we will select the music based on the value after the prefix
+                            musicChoice[i - strlen(musicPrefix)] = line[i];
+                          }
+
+                          musicSelector = atoi(musicChoice);
+                        }
+                        // check to see if the line is an xpos line
+                        else if(strncmp(xposPrefix, line, strlen(xposPrefix)) == 0)
+                        {
+                          // ensure that the line has a value
+                          if(strlen(line) <= strlen(xposPrefix))
+                          {
+                            *loadError = true;
+                            printf("xpos prefix has no value\n");
+                            break;
+                          }
+
+                          char xChoice[100];
+                          for (int i = (int) strlen(xposPrefix); i < (int) strlen(line) - 1; ++i)
+                          {
+                            // we will select the x pos based on the value after the prefix
+                            xChoice[i - strlen(xposPrefix)] = line[i];
+                          }
+                          // reading in xpos
+                          (*player).x = atoi(xChoice) * TILE_WIDTH + X_OFFSET;
+
+                        }
+                        // check to see if the line is a ypos line
+                        else if(strncmp(yposPrefix, line, strlen(yposPrefix)) == 0)
+                        {
+                          // ensure that the line has a value
+                          if(strlen(line) <= strlen(yposPrefix))
+                          {
+                            *loadError = true;
+                            printf("ypos prefix has no value\n");
+                            break;
+                          }
+
+                          char yChoice[100];
+                          for (int i = (int) strlen(yposPrefix); i < (int) strlen(line) - 1; ++i)
+                          {
+                            // we will select the x pos based on the value after the prefix
+                            yChoice[i - strlen(yposPrefix)] = line[i];
+                          }
+                          // reading in ypos
+                          (*player).y = atoi(yChoice) * TILE_HEIGHT;
+                        }
+                      }
+                      // close the file for safety
+                      fclose(saveFile);
+                      break;
+                    default:
+                      break;
+                  }
+                  break;
+                // consider when we are dealing with the game
+                case GAME:
+                  // simply change to the menu state
+                  *currentGameState = MENU;
+                  *currentMenuState = SAVE;
+                  break;
+                default:
+                  break;
+              }
+              break;
+            // handle 'up' input for switching between menu options
+            case SDLK_w:
+              if (*currentMenuState > 0 && !(*loadError)) 
+              {
+                --(*currentMenuState);
+              }
+              break;
+            // handle 'down' input for switching between menu options
+            case SDLK_s:
+              if ((*currentMenuState) < MENU_ITEM_COUNT - 1 && !(*loadError)) 
+              {
+                ++(*currentMenuState);
+              }
+              break;
+          }
+          break;
+      }
+    }
 }
 
 /**
@@ -354,203 +544,28 @@ void* game ()
   bool loadError = false;
 
   // Copy the map from the array to the map variable, initialize settings
-  LoadMap(map, PERLLERT_TOWN);
+  loadMap(map, PERLLERT_TOWN);
   musicSelector = 1; // start with perllert town music
   int chooseMap = 1; // determine which map to load, start with perllert town map
-  
+
+  /*
+  // PURELY FOR TRACKING ACTUAL FPS
+  int frameCount = 0;
+  float fps = 0;
+  Uint32 startTicks = SDL_GetTicks();
+  */
+
   /******* Part 3: Setup the game loop and main logic *******/
   while (isRunning) 
   {
     /***** Part 3a: initialize the loop, determine which screen to render *****/
     frameStart = SDL_GetTicks();
     
-    // event handling
-    while (SDL_PollEvent(&event)) 
-    {
-      switch(event.type)
-      {
-        // handle quit event
-        case SDL_QUIT:
-          isRunning = 0;
-          break;
-        // handle key press from user
-        case SDL_KEYDOWN:
-          switch(event.key.keysym.sym)
-          {
-            // handle 'enter' input for switching between game and menu
-            case SDLK_RETURN:
-              switch(currentGameState)
-              {
-                // consider when we are dealing with the menu
-                case MENU:
-                  /***** Part 3b: handle the save system *****/
-                  switch (currentMenuState)
-                  {
-                    // handle save case
-                    case SAVE:
-                      // save the game by calling our saveGame function
-                      saveGame(mainCharacter.x, mainCharacter.y, currentMapName, musicSelector);
-                      break;
-                    // handle exit menu case
-                    case EXIT:
-                      // simply change the game state to exit the game
-                      currentGameState = GAME;
-                      break;
-                    // handle load case
-                    case LOAD:
-                      // check to see whether we are in the load error state or not
-                      if (loadError) 
-                      {
-                        currentMenuState = LOAD;
-                        loadError = false;
-                        break;
-                      }
-
-                      // load the game
-                      FILE* saveFile = fopen("save_data/save.txt", "r");
-                      char line[100]; // Array to hold each line of the file
-
-                      // Check if the file exists
-                      if (saveFile == NULL) 
-                      {
-                        loadError = true;
-                        break;
-                      }
-
-                      // Read the file line by line
-                      while (fgets(line, sizeof(line), saveFile) != NULL) 
-                      {
-                        // set up our checks in the save file
-                        char mapPrefix[] = "map: ";
-                        char musicPrefix[] = "music: ";
-                        char xposPrefix[] = "xpos: ";
-                        char yposPrefix[] = "ypos: ";
-
-                        // check to see if the line is a map line
-                        if(strncmp(mapPrefix, line, strlen(mapPrefix)) == 0)
-                        {
-                          // ensure that the line has a value
-                          if(strlen(line) <= strlen(mapPrefix))
-                          {
-                            loadError = true;
-                            printf("map prefix has no value\n");
-                            break;
-                          }
-
-                          // we will select the map based on the string after the prefix
-                          char* mapChoice = line + strlen(mapPrefix);
-                          
-                          // now we have the map choice, we can change the map variable
-                          // 18 is the number of characters in "perllert_town_map", not magic number
-                          if(strncmp("perllert_town_map", mapChoice, strlen("perllert_town_map")) == 0)
-                          {
-                            LoadMap(map, PERLLERT_TOWN);
-                            chooseMap = 1;
-                          }
-                          else if(strncmp("pkrmrn_ctr_map", mapChoice, strlen("pkrmrn_ctr_map")) == 0)
-                          {
-                            LoadMap(map, PKRMN_CTR);
-                            chooseMap = 2;
-                          }
-                        }
-                        // check to see if the line is a music line
-                        else if(strncmp(musicPrefix, line, strlen(musicPrefix)) == 0)
-                        {
-                          // ensure that the line has a value
-                          if(strlen(line) <= strlen(musicPrefix))
-                          {
-                            loadError = true;
-                            printf("music prefix has no value\n");
-                            break;
-                          }
-
-                          char musicChoice[100];
-                          for (int i = (int) strlen(musicPrefix); i < (int) strlen(line) - 1; ++i)
-                          {                    
-                            // we will select the music based on the value after the prefix
-                            musicChoice[i - strlen(musicPrefix)] = line[i];
-                          }
-
-                          musicSelector = atoi(musicChoice);
-                        }
-                        // check to see if the line is an xpos line
-                        else if(strncmp(xposPrefix, line, strlen(xposPrefix)) == 0)
-                        {
-                          // ensure that the line has a value
-                          if(strlen(line) <= strlen(xposPrefix))
-                          {
-                            loadError = true;
-                            printf("xpos prefix has no value\n");
-                            break;
-                          }
-
-                          char xChoice[100];
-                          for (int i = (int) strlen(xposPrefix); i < (int) strlen(line) - 1; ++i)
-                          {
-                            // we will select the x pos based on the value after the prefix
-                            xChoice[i - strlen(xposPrefix)] = line[i];
-                          }
-                          // reading in xpos
-                          mainCharacter.x = atoi(xChoice) * TILE_WIDTH + X_OFFSET;
-
-                        }
-                        // check to see if the line is a ypos line
-                        else if(strncmp(yposPrefix, line, strlen(yposPrefix)) == 0)
-                        {
-                          // ensure that the line has a value
-                          if(strlen(line) <= strlen(yposPrefix))
-                          {
-                            loadError = true;
-                            printf("ypos prefix has no value\n");
-                            break;
-                          }
-
-                          char yChoice[100];
-                          for (int i = (int) strlen(yposPrefix); i < (int) strlen(line) - 1; ++i)
-                          {
-                            // we will select the x pos based on the value after the prefix
-                            yChoice[i - strlen(yposPrefix)] = line[i];
-                          }
-                          // reading in ypos
-                          mainCharacter.y = atoi(yChoice) * TILE_HEIGHT;
-                        }
-                      }
-                      // close the file for safety
-                      fclose(saveFile);
-                      break;
-                    default:
-                      break;
-                  }
-                  break;
-                // consider when we are dealing with the game
-                case GAME:
-                  // simply change to the menu state
-                  currentGameState = MENU;
-                  currentMenuState = SAVE;
-                  break;
-                default:
-                  break;
-              }
-              break;
-            // handle 'up' input for switching between menu options
-            case SDLK_w:
-              if (currentMenuState > 0 && !loadError) 
-              {
-                --currentMenuState;
-              }
-              break;
-            // handle 'down' input for switching between menu options
-            case SDLK_s:
-              if (currentMenuState < MENU_ITEM_COUNT - 1 && !loadError) 
-              {
-                ++currentMenuState;
-              }
-              break;
-          }
-          break;
-      }
-    }
-    
+    // handle events
+    // this will handle the user input and determine which screen (game or menu) to render
+    HandleEvents(&isRunning, &currentGameState, &currentMenuState, &mainCharacter, 
+                 &loadError, &event, currentMapName, map, &chooseMap);
+        
     // Clear the renderer
     SDL_RenderClear(renderer);
 
@@ -734,10 +749,10 @@ void* game ()
             switch(chooseMap)
             {
               case 1:
-                LoadMap(map, PERLLERT_TOWN);
+                loadMap(map, PERLLERT_TOWN);
                 break;
               case 2:
-                LoadMap(map, PKRMN_CTR);
+                loadMap(map, PKRMN_CTR);
                 break;
               default:
                 break;
@@ -820,6 +835,19 @@ void* game ()
     // present the renderer
     SDL_RenderPresent(renderer);
 
+    /*
+    // PURELY FOR TRACKING ACTUAL FPS
+    frameCount++;
+    if (SDL_GetTicks() - startTicks >= 1000) { // Every second
+        fps = frameCount / ((SDL_GetTicks() - startTicks) / 1000.0f);
+        frameCount = 0;
+        startTicks = SDL_GetTicks();
+
+        // Display or use the FPS value
+        printf("FPS: %.2f\n", fps);
+    }
+    */
+
     // Framerate control
     int frameTime = SDL_GetTicks() - frameStart;
     if (FRAME_DELAY > frameTime) 
@@ -830,17 +858,14 @@ void* game ()
 
   /******* Part 4: Cleanup *******/
   SDL_DestroyTexture(mainCharacter.sprite);
-
   SDL_DestroyTexture(menuSave);
   SDL_DestroyTexture(menuLoad);
   SDL_DestroyTexture(menuLoadError);
   SDL_DestroyTexture(menuExit);
-
   destroyTextures(gameTextures, textureCount);
 
   SDL_DestroyRenderer(renderer); 
   SDL_DestroyWindow(window);
-  IMG_Quit(); 
   
   // set the music selector to -1 to signal the music thread to close
   musicSelector = -1;
@@ -940,6 +965,7 @@ int main () //(int argc, char* argv[])
   
   // SDL_Quit is called here to prevent a forced shutdown of the other thread
   // that could potentially cause concurrency issues if we quit before thread closing
+  IMG_Quit(); 
   SDL_Quit();
 
   return 0;
