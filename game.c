@@ -22,6 +22,8 @@
 #define MENU_ITEM_COUNT 3
 #define SPRITE_FRAMES 2 // the frames per direction
 #define ANIMATION_DELAY 125 // the millisecond delay between frames
+#define FRAME_DELAY 1000 / FPS // frame delay for 60 fps and making sure CPU does not run 100%
+#define NUM_TEXTURES 12 // the number of textures that we will be using
 
 // I didn't want to include math.h because I was purely dealing with integers
 // instead I decided to use these trivial macros for min and maxing
@@ -46,7 +48,74 @@ MenuState currentMenuState = SAVE;
 
 // Variables for tracking character direction and state
 typedef enum { RIGHT, LEFT, UP, DOWN, IDLE_RIGHT, IDLE_LEFT, IDLE_UP, IDLE_DOWN } Direction;
-Direction characterDirection = IDLE_DOWN; // default direction
+
+// Structs for managing game data
+typedef struct 
+{
+    int x, y;
+    Direction direction;
+    SDL_Texture *sprite;
+} Player;
+
+typedef struct 
+{
+    SDL_Texture *textures[NUM_TEXTURES]; // Define NUM_TEXTURES as needed
+    int map[MAP_ROWS][MAP_COLS];
+} GameMap;
+
+
+void initSDL () 
+{
+  // error checking for SDL and SDL_image
+  if (SDL_Init(SDL_INIT_VIDEO) < 0) 
+  {
+    fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+    return;
+  }
+
+  if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) 
+  {
+    fprintf(stderr, "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
+    SDL_Quit();
+    return;
+  }
+}
+
+void setupWindow (SDL_Window** window, SDL_Renderer** renderer) 
+{
+  // resolution is scaled 8x higher than what will be rendered (1280x1152 screen for 160x144 game)
+  *window = SDL_CreateWindow("Perkemerrrrrrnnnnnnn", 
+                            SDL_WINDOWPOS_CENTERED, 
+                            SDL_WINDOWPOS_CENTERED, 
+                            X_RESOLUTION * RES_SCALE, 
+                            Y_RESOLUTION * RES_SCALE, 
+                            SDL_WINDOW_SHOWN);
+  // make sure window runs successfully
+  if (!(*window)) 
+  {
+    fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
+    IMG_Quit();
+    SDL_Quit();
+    return;
+  }
+
+  *renderer = SDL_CreateRenderer(*window, -1, SDL_RENDERER_ACCELERATED);
+
+  // make sure renderer runs successfully
+  if (!(*renderer)) 
+  {
+    fprintf(stderr, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
+    SDL_DestroyWindow(*window);
+    IMG_Quit();
+    SDL_Quit();
+    return;
+  }
+
+  // set up the render to match our desired resolution
+  SDL_RenderSetLogicalSize(*renderer, X_RESOLUTION, Y_RESOLUTION); // resolution is 160x144
+}
+
+
 
 /**
  * This function will save the game state to a file
@@ -97,12 +166,14 @@ void saveGame (int x, int y, char* currentMap, int musicSelector)
  * 
  * @return void
  */
-void calculateSrcRect(SDL_Rect *srcRect, Direction direction, int currentFrame) {
+void calculateSrcRect(SDL_Rect *srcRect, Direction direction, int currentFrame) 
+{
     srcRect->w = TILE_WIDTH;
     srcRect->h = TILE_HEIGHT;
 
     // Idle frames are all in the first row, walking frames are in subsequent rows
-    switch (direction) {
+    switch (direction) 
+    {
         case IDLE_RIGHT:
             srcRect->x = 0 * TILE_WIDTH;
             srcRect->y = 0;
@@ -147,64 +218,27 @@ void calculateSrcRect(SDL_Rect *srcRect, Direction direction, int currentFrame) 
  */
 void* game () 
 {
-  /******* PART 1: Initialize the window *******/
-  // error checking for SDL and SDL_image
-  if (SDL_Init(SDL_INIT_VIDEO) < 0) 
-  {
-    fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-    return NULL;
-  }
-
-  if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) 
-  {
-    fprintf(stderr, "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
-    SDL_Quit();
-    return NULL;
-  }
+  // Initialize SDL
+  initSDL();
 
   // declare the window and renderer
   SDL_Window *window;
   SDL_Renderer *renderer;
   SDL_Event event;
-  int isRunning = 1, 
-      x = (X_RESOLUTION - TILE_WIDTH) / 2, 
-      y = (Y_RESOLUTION - TILE_HEIGHT) / 2;
   
-  // resolution is scaled 8x higher than what will be rendered (1280x1152 screen for 160x144 game)
-  window = SDL_CreateWindow("Perkemerrrrrrnnnnnnn", 
-                            SDL_WINDOWPOS_CENTERED, 
-                            SDL_WINDOWPOS_CENTERED, 
-                            X_RESOLUTION * RES_SCALE, 
-                            Y_RESOLUTION * RES_SCALE, 
-                            SDL_WINDOW_SHOWN);
-  
+  // set up the window and renderer
+  setupWindow(&window, &renderer);
 
-  // make sure window runs successfully
-  if (!window) 
-  {
-    fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
-    IMG_Quit();
-    SDL_Quit();
-    return NULL;
-  }
-  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-  // make sure renderer runs successfully
-  if (!renderer) 
-  {
-    fprintf(stderr, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
-    SDL_DestroyWindow(window);
-    IMG_Quit();
-    SDL_Quit();
-    return NULL;
-  }
+  int isRunning = 1; // control variable for the main loop
+  Player mainCharacter = {(X_RESOLUTION - TILE_WIDTH) / 2, // default x position
+                          (Y_RESOLUTION - TILE_HEIGHT) / 2, // default y position
+                          IDLE_DOWN, // default direction
+                          IMG_LoadTexture(renderer, "assets/textures/characters/mc.png")}; // default texture
 
-  // set up the render to match our desired resolution
-  SDL_RenderSetLogicalSize(renderer, X_RESOLUTION, Y_RESOLUTION); // resolution is 160x144
+
 
   /******* Part 2: Initialize the framerate, load the textures, and set up the maps *******/
-  const int frameDelay = 1000 / FPS; // frame delay for 60 fps and making sure CPU does not run 100%
-  Uint32 frameStart;
-
+  Uint32 frameStart; // Time at the start of the frame
   Uint32 lastMoveTime = 0; // Time of the last movement
 
   // Load the menu textures
@@ -212,25 +246,26 @@ void* game ()
   SDL_Texture *menuLoad = IMG_LoadTexture(renderer, "assets/textures/menu/menu_load.png");
   SDL_Texture *menuLoadError = IMG_LoadTexture(renderer, "assets/textures/menu/menu_load_error.png");
   SDL_Texture *menuExit = IMG_LoadTexture(renderer, "assets/textures/menu/menu_exit.png");
-
-  // Load the sprite image
-  SDL_Texture *sprite = IMG_LoadTexture(renderer, "assets/textures/characters/mc.png");
   
   // Load ALL the scene textures
-  SDL_Texture *wallTexture = IMG_LoadTexture(renderer, "assets/textures/world/wall_grey.png");
-  SDL_Texture *floorTexture = IMG_LoadTexture(renderer, "assets/textures/world/grass_grey.png");
-  SDL_Texture *perllertRightExitTexture = IMG_LoadTexture(renderer, "assets/textures/world/enter_pkrmrn_ctr.png");
-  
-  SDL_Texture *pkrmrnLeftExitTexture = IMG_LoadTexture(renderer, "assets/textures/world/enter_perllert_town.png");
-  SDL_Texture *ctrTopRight = IMG_LoadTexture(renderer, "assets/textures/world/ctr_tile_top_right.png");
-  SDL_Texture *ctrTopLeft = IMG_LoadTexture(renderer, "assets/textures/world/ctr_tile_top_left.png");
-  SDL_Texture *ctrBottomRight = IMG_LoadTexture(renderer, "assets/textures/world/ctr_tile_bottom_right.png");
-  SDL_Texture *ctrBottomLeft = IMG_LoadTexture(renderer, "assets/textures/world/ctr_tile_bottom_left.png");
-  
-  SDL_Texture *ctrWall1 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall1.png");
-  SDL_Texture *ctrWall2 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall2.png");
-  SDL_Texture *ctrWall3 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall3.png");
-  SDL_Texture *ctrWall4 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall4.png");
+  SDL_Texture *wallTexture, *floorTexture, *perllertRightExitTexture, *pkrmrnLeftExitTexture, 
+              *ctrTopRight, *ctrTopLeft, *ctrBottomRight, *ctrBottomLeft, *ctrWall1, *ctrWall2, 
+              *ctrWall3, *ctrWall4; 
+
+  wallTexture = IMG_LoadTexture(renderer, "assets/textures/world/wall_grey.png");
+  floorTexture = IMG_LoadTexture(renderer, "assets/textures/world/grass_grey.png");
+  perllertRightExitTexture = IMG_LoadTexture(renderer, "assets/textures/world/enter_pkrmrn_ctr.png");
+    
+  pkrmrnLeftExitTexture = IMG_LoadTexture(renderer, "assets/textures/world/enter_perllert_town.png");
+  ctrTopRight = IMG_LoadTexture(renderer, "assets/textures/world/ctr_tile_top_right.png");
+  ctrTopLeft = IMG_LoadTexture(renderer, "assets/textures/world/ctr_tile_top_left.png");
+  ctrBottomRight = IMG_LoadTexture(renderer, "assets/textures/world/ctr_tile_bottom_right.png");
+  ctrBottomLeft = IMG_LoadTexture(renderer, "assets/textures/world/ctr_tile_bottom_left.png");
+    
+  ctrWall1 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall1.png");
+  ctrWall2 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall2.png");
+  ctrWall3 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall3.png");
+  ctrWall4 = IMG_LoadTexture(renderer, "assets/textures/world/ctr_wall4.png");
 
   // set up the perllert town map
   int perllert_town_map[MAP_ROWS][MAP_COLS] = 
@@ -278,7 +313,7 @@ void* game ()
 
   musicSelector = 1; // start with perllert town music
   int chooseMap = 1; // determine which map to load, start with perllert town map
-
+  
   /******* Part 3: Setup the game loop and main logic *******/
   while (isRunning) 
   {
@@ -310,7 +345,7 @@ void* game ()
                     // handle save case
                     case SAVE:
                       // save the game by calling our saveGame function
-                      saveGame(x, y, currentMapName, musicSelector);
+                      saveGame(mainCharacter.x, mainCharacter.y, currentMapName, musicSelector);
                       break;
                     // handle exit menu case
                     case EXIT:
@@ -419,7 +454,7 @@ void* game ()
                             xChoice[i - strlen(xposPrefix)] = line[i];
                           }
                           // reading in xpos
-                          x = atoi(xChoice) * TILE_WIDTH + X_OFFSET;
+                          mainCharacter.x = atoi(xChoice) * TILE_WIDTH + X_OFFSET;
 
                         }
                         // check to see if the line is a ypos line
@@ -440,7 +475,7 @@ void* game ()
                             yChoice[i - strlen(yposPrefix)] = line[i];
                           }
                           // reading in ypos
-                          y = atoi(yChoice) * TILE_HEIGHT;
+                          mainCharacter.y = atoi(yChoice) * TILE_HEIGHT;
                         }
                       }
                       // close the file for safety
@@ -575,12 +610,12 @@ void* game ()
           int moved = 0;
 
           // track our new coordinates
-          int newX = x;
-          int newY = y;
+          int newX = mainCharacter.x;
+          int newY = mainCharacter.y;
 
           // track our grid position
-          int gridX = x / TILE_WIDTH;
-          int gridY = y / TILE_HEIGHT;
+          int gridX = mainCharacter.x / TILE_WIDTH;
+          int gridY = mainCharacter.y / TILE_HEIGHT;
 
           // track whether we need to switch maps or not
           bool switchMap = false;
@@ -592,7 +627,7 @@ void* game ()
           if (state[SDL_SCANCODE_W]) 
           {
             // update animation variables
-            characterDirection = UP;
+            mainCharacter.direction = UP;
 
             // case we are moving up
             newY -= TILE_HEIGHT; 
@@ -601,7 +636,7 @@ void* game ()
           else if (state[SDL_SCANCODE_A]) 
           {
             // update animation variables
-            characterDirection = LEFT;
+            mainCharacter.direction = LEFT;
 
             // case we are moving left
             newX -= TILE_WIDTH;
@@ -617,7 +652,7 @@ void* game ()
 
                 // setup starting coordinates
                 newX = MAP_COLS * TILE_WIDTH;
-                newY = y;
+                newY = mainCharacter.y;
                 moved = 0;
 
                 // setup music
@@ -630,7 +665,7 @@ void* game ()
           else if (state[SDL_SCANCODE_S]) 
           {
             // update animation variables
-            characterDirection = DOWN;
+            mainCharacter.direction = DOWN;
 
             // case we are moving down
             newY += TILE_HEIGHT;
@@ -639,7 +674,7 @@ void* game ()
           else if (state[SDL_SCANCODE_D]) 
           {
             // update animation variables
-            characterDirection = RIGHT;
+            mainCharacter.direction = RIGHT;
 
             // case we are moving right
             newX += TILE_WIDTH; 
@@ -655,7 +690,7 @@ void* game ()
 
                 // setup starting coordinates
                 newX = -TILE_WIDTH;
-                newY = y;
+                newY = mainCharacter.y;
                 moved = 0;
 
                 // setup music
@@ -668,19 +703,19 @@ void* game ()
           if (!(state[SDL_SCANCODE_W] || state[SDL_SCANCODE_A] || state[SDL_SCANCODE_S] || state[SDL_SCANCODE_D]))
           {
               currentFrame = 0; // reset animation frame for idle
-              switch(characterDirection)
+              switch(mainCharacter.direction)
               {
                 case UP:
-                  characterDirection = IDLE_UP;
+                  mainCharacter.direction = IDLE_UP;
                   break;
                 case LEFT:
-                  characterDirection = IDLE_LEFT;
+                  mainCharacter.direction = IDLE_LEFT;
                   break;
                 case DOWN:
-                  characterDirection = IDLE_DOWN;
+                  mainCharacter.direction = IDLE_DOWN;
                   break;
                 case RIGHT:
-                  characterDirection = IDLE_RIGHT;
+                  mainCharacter.direction = IDLE_RIGHT;
                   break;
                 default:
                   break;
@@ -723,8 +758,8 @@ void* game ()
             }
 
             // apply our changed coordinates to the new map
-            x = newX + X_OFFSET;
-            y = newY;  
+            mainCharacter.x = newX + X_OFFSET;
+            mainCharacter.y = newY;  
 
             // reset the switch map variable
             switchMap = false;
@@ -751,8 +786,8 @@ void* game ()
               case 6:
               case 7:
                 // ensure the character is within map bounds
-                x = newX;
-                y = newY;
+                mainCharacter.x = newX;
+                mainCharacter.y = newY;
                 break;
               default: // default is that the texture is a wall
                 break;
@@ -768,8 +803,8 @@ void* game ()
         }
 
         /***** Part 3e: Finalize changes to frame *****/
-        if (characterDirection != IDLE_RIGHT && characterDirection != IDLE_LEFT && 
-            characterDirection != IDLE_UP && characterDirection != IDLE_DOWN) 
+        if (mainCharacter.direction != IDLE_RIGHT && mainCharacter.direction != IDLE_LEFT && 
+            mainCharacter.direction != IDLE_UP && mainCharacter.direction != IDLE_DOWN) 
         {
           // Update the frame if the character is not idle
           if (currentTime - lastAnimationFrame >= ANIMATION_DELAY) 
@@ -785,14 +820,14 @@ void* game ()
         }
         
         SDL_Rect srcRect;
-        calculateSrcRect(&srcRect, characterDirection, currentFrame);
+        calculateSrcRect(&srcRect, mainCharacter.direction, currentFrame);
 
         // Render the sprite
-        SDL_Rect destRect = {x - X_OFFSET, // for whatever reason, the sprite has an off by 8 issue, so I just fix it here
-                            y, 
-                            TILE_WIDTH, 
-                            TILE_HEIGHT};
-        SDL_RenderCopy(renderer, sprite, &srcRect, &destRect);
+        SDL_Rect destRect = {mainCharacter.x - X_OFFSET, // for whatever reason, the sprite has an off by 8 issue, so I just fix it here
+                             mainCharacter.y, 
+                             TILE_WIDTH, 
+                             TILE_HEIGHT};
+        SDL_RenderCopy(renderer, mainCharacter.sprite, &srcRect, &destRect);
         break;
     }
 
@@ -801,19 +836,20 @@ void* game ()
 
     // Framerate control
     int frameTime = SDL_GetTicks() - frameStart;
-    if (frameDelay > frameTime) 
+    if (FRAME_DELAY > frameTime) 
     {
-      SDL_Delay(frameDelay - frameTime);
+      SDL_Delay(FRAME_DELAY - frameTime);
     }
   }
 
   /******* Part 4: Cleanup *******/
+  SDL_DestroyTexture(mainCharacter.sprite);
+
   SDL_DestroyTexture(menuSave);
   SDL_DestroyTexture(menuLoad);
   SDL_DestroyTexture(menuLoadError);
   SDL_DestroyTexture(menuExit);
 
-  SDL_DestroyTexture(sprite);
   SDL_DestroyTexture(wallTexture);
   SDL_DestroyTexture(floorTexture);
   SDL_DestroyTexture(perllertRightExitTexture);
