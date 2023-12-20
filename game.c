@@ -49,6 +49,9 @@ MenuState currentMenuState = SAVE;
 // Variables for tracking character direction and state
 typedef enum { RIGHT, LEFT, UP, DOWN, IDLE_RIGHT, IDLE_LEFT, IDLE_UP, IDLE_DOWN } Direction;
 
+// Define map types
+typedef enum { PERLLERT_TOWN, PKRMN_CTR } MapType;
+
 // Structs for managing game data
 typedef struct 
 {
@@ -56,12 +59,6 @@ typedef struct
     Direction direction;
     SDL_Texture *sprite;
 } Player;
-
-typedef struct 
-{
-    SDL_Texture **textures; // double pointer to an array of textures based on the map
-    int map[MAP_ROWS][MAP_COLS];
-} GameMap;
 
 /**
  * This function will initialize SDL and SDL_image
@@ -170,6 +167,50 @@ void destroyTextures (SDL_Texture** textures, int textureCount)
   for (int i = 0; i < textureCount; ++i) 
   {
     SDL_DestroyTexture(textures[i]);
+  }
+}
+
+// Function to load the map
+void LoadMap(int map[MAP_ROWS][MAP_COLS], MapType mapType) 
+{
+  switch (mapType) 
+  {
+    case PERLLERT_TOWN: 
+    {
+      // Map layout for Perllert Town
+      int perllert_town_map[MAP_ROWS][MAP_COLS] = 
+      {
+        {1, 1, 1, 1, 1, 1, 1, 1, 0, 1}, // 1 represents a wall
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, // 0 represents a walkable tile
+        {1, 0, 0, 0, 0, 1, 1, 0, 0, 1}, 
+        {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, 
+        {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, 
+        {1, 0, 1, 0, 0, 0, 1, 0, 0, 1}, 
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 2}, // 2 represents an exit point
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 2}, 
+        {1, 0, 0, 1, 1, 1, 1, 1, 1, 1}, 
+      };
+      memcpy(map, perllert_town_map, sizeof(perllert_town_map));
+      break;
+    }
+    case PKRMN_CTR:
+    {
+      // Map layout for Perkemern Center
+      int pkrmrn_ctr_map[MAP_ROWS][MAP_COLS] = 
+      {
+        {9, 11, 11, 11, 9, 9, 11, 11, 11, 9}, 
+        {9, 5,  4,  5,  9, 9, 4,  5,  4,  9}, 
+        {8, 10, 10, 10, 8, 8, 10, 10, 10, 8}, 
+        {4, 5,  4,  5,  4, 5, 4,  5,  4,  5}, 
+        {6, 7,  6,  7,  6, 7, 6,  7,  6,  7}, 
+        {4, 5,  4,  5,  4, 5, 4,  5,  4,  5}, 
+        {3, 7,  6,  7,  6, 7, 6,  7,  6,  7}, // 3 represents exit point
+        {3, 5,  4,  5,  4, 5, 4,  5,  4,  5}, 
+        {6, 7,  6,  7,  6, 7, 6,  7,  6,  7}, 
+      };
+      memcpy(map, pkrmrn_ctr_map, sizeof(pkrmrn_ctr_map));
+      break;
+    }
   }
 }
 
@@ -305,34 +346,6 @@ void* game ()
   SDL_Texture *gameTextures[MAX_GAME_TEXTURES];
   int textureCount = loadTextures(gameTextures, &renderer);
 
-  // set up the perllert town map
-  int perllert_town_map[MAP_ROWS][MAP_COLS] = 
-  {
-    {1, 1, 1, 1, 1, 1, 1, 1, 0, 1}, // 1 represents a wall
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, // 0 represents a walkable tile
-    {1, 0, 0, 0, 0, 1, 1, 0, 0, 1}, 
-    {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, 
-    {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, 
-    {1, 0, 1, 0, 0, 0, 1, 0, 0, 1}, 
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 2}, // 2 represents an exit point
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 2}, 
-    {1, 0, 0, 1, 1, 1, 1, 1, 1, 1}, 
-  };
-
-  // set up the perkemern center map
-  int pkrmrn_ctr_map[MAP_ROWS][MAP_COLS] = 
-  {
-    {9, 11, 11, 11, 9, 9, 11, 11, 11, 9}, 
-    {9, 5,  4,  5,  9, 9, 4,  5,  4,  9}, 
-    {8, 10, 10, 10, 8, 8, 10, 10, 10, 8}, 
-    {4, 5,  4,  5,  4, 5, 4,  5,  4,  5}, 
-    {6, 7,  6,  7,  6, 7, 6,  7,  6,  7}, 
-    {4, 5,  4,  5,  4, 5, 4,  5,  4,  5}, 
-    {3, 7,  6,  7,  6, 7, 6,  7,  6,  7}, // 3 represents exit point
-    {3, 5,  4,  5,  4, 5, 4,  5,  4,  5}, 
-    {6, 7,  6,  7,  6, 7, 6,  7,  6,  7}, 
-  };
-
   // set up the map variable and its naming convention
   int map[MAP_ROWS][MAP_COLS];
   char* currentMapName = "perllert_town_map";
@@ -340,15 +353,8 @@ void* game ()
   // set up the load error variable for save handling
   bool loadError = false;
 
-  // Copy the map from the array to the map variable
-  for (int i = 0; i < MAP_ROWS; ++i)
-  {
-    for (int j = 0; j < MAP_COLS; ++j)
-    {
-      map[i][j] = perllert_town_map[i][j];
-    }
-  }
-
+  // Copy the map from the array to the map variable, initialize settings
+  LoadMap(map, PERLLERT_TOWN);
   musicSelector = 1; // start with perllert town music
   int chooseMap = 1; // determine which map to load, start with perllert town map
   
@@ -436,22 +442,15 @@ void* game ()
                           
                           // now we have the map choice, we can change the map variable
                           // 18 is the number of characters in "perllert_town_map", not magic number
-                          for (int i = 0; i < MAP_ROWS; ++i)
+                          if(strncmp("perllert_town_map", mapChoice, strlen("perllert_town_map")) == 0)
                           {
-                            for (int j = 0; j < MAP_COLS; ++j)
-                            {
-                              // we will select the map based on the value after the prefix
-                              if (strncmp("perllert_town_map", mapChoice, strlen("perllert_town_map")) == 0)
-                              {
-                                map[i][j] = perllert_town_map[i][j];
-                                chooseMap = 1;
-                              }
-                              else if (strncmp("pkrmrn_ctr_map", mapChoice, strlen("pkrmrn_ctr_map")) == 0)
-                              {
-                                map[i][j] = pkrmrn_ctr_map[i][j];
-                                chooseMap = 2;
-                              }
-                            }
+                            LoadMap(map, PERLLERT_TOWN);
+                            chooseMap = 1;
+                          }
+                          else if(strncmp("pkrmrn_ctr_map", mapChoice, strlen("pkrmrn_ctr_map")) == 0)
+                          {
+                            LoadMap(map, PKRMN_CTR);
+                            chooseMap = 2;
                           }
                         }
                         // check to see if the line is a music line
@@ -732,23 +731,16 @@ void* game ()
           // determine if we need to switch maps
           if(switchMap)
           {
-            // loop through our map variable and change it to the new map
-            for (int i = 0; i < MAP_ROWS; ++i)
+            switch(chooseMap)
             {
-              for (int j = 0; j < MAP_COLS; ++j)
-              {
-                switch(chooseMap)
-                {
-                  case 1:
-                    map[i][j] = perllert_town_map[i][j];
-                    break;
-                  case 2:
-                    map[i][j] = pkrmrn_ctr_map[i][j];
-                    break;
-                  default:
-                    break;
-                }
-              }
+              case 1:
+                LoadMap(map, PERLLERT_TOWN);
+                break;
+              case 2:
+                LoadMap(map, PKRMN_CTR);
+                break;
+              default:
+                break;
             }
 
             // apply our changed coordinates to the new map
