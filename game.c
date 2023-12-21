@@ -280,7 +280,7 @@ void saveGame (int x, int y, char* currentMap, int musicSelector)
 }
 
 /**
- * This function will handle the events for the game
+ * This function will handle the events for the game, including user input and save handling
  * 
  * @param isRunning the control variable for the main loop
  * @param currentGameState the current game state
