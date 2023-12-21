@@ -14,7 +14,7 @@
 #define X_OFFSET 8
 #define MAP_ROWS 9
 #define MAP_COLS 10
-#define FPS 120
+#define FPS 1200
 #define X_RESOLUTION 160
 #define Y_RESOLUTION 144
 #define MOVEMENT_DELAY 150
@@ -871,12 +871,12 @@ void* game ()
   musicSelector = 1; // start with perllert town music
   int chooseMap = 1; // determine which map to load, start with perllert town map
 
-  /*
+  
   // PURELY FOR TRACKING ACTUAL FPS
   int frameCount = 0;
   float fps = 0;
   Uint32 startTicks = SDL_GetTicks();
-  */
+  
 
   // setup the game loop and main logic 
   while (isRunning) 
@@ -900,7 +900,7 @@ void* game ()
     // present the renderer
     SDL_RenderPresent(renderer);
 
-    /*
+    
     // PURELY FOR TRACKING ACTUAL FPS
     frameCount++;
     if (SDL_GetTicks() - startTicks >= 1000) { // Every second
@@ -911,7 +911,7 @@ void* game ()
         // Display or use the FPS value
         printf("FPS: %.2f\n", fps);
     }
-    */
+    
 
 
     // Framerate control
@@ -940,7 +940,7 @@ void* game ()
  * 
  * @return void
  */
-void* music()
+void* music() 
 {
   // Initialize SDL
   SDL_Init(SDL_INIT_AUDIO);
