@@ -154,6 +154,14 @@ int loadTextures (SDL_Texture** textures, SDL_Renderer** renderer)
   return i;
 }
 
+/**
+ * This function will load the textures for the menu
+ * 
+ * @param textures the array of textures to be loaded
+ * @param renderer the renderer that will be used to load the textures
+ * 
+ * @return int the number of textures loaded
+ */
 int loadMenuTextures (SDL_Texture** textures, SDL_Renderer** renderer) 
 {
   // load the textures for the menu
@@ -182,7 +190,12 @@ void destroyTextures (SDL_Texture** textures, int textureCount)
   }
 }
 
-// Function to load the map
+/**
+ * This function will load the map into the game
+ * 
+ * @param map the map that will be loaded
+ * @param mapType the type of map that will be loaded
+ */
 void loadMap(int map[MAP_ROWS][MAP_COLS], MapType mapType) 
 {
   switch (mapType) 
@@ -266,6 +279,21 @@ void saveGame (int x, int y, char* currentMap, int musicSelector)
   fclose(saveFile);
 }
 
+/**
+ * This function will handle the events for the game
+ * 
+ * @param isRunning the control variable for the main loop
+ * @param currentGameState the current game state
+ * @param currentMenuState the current menu state
+ * @param player the player struct, intended for the main character
+ * @param loadError the load error variable to determine whether we are in the load error state or not
+ * @param event the event that will be handled
+ * @param currentMapName the current map name
+ * @param map the map that will be loaded in association with the current map name
+ * @param chooseMap the variable to determine which map to next load
+ * 
+ * @return void
+ */
 void HandleEvents(int* isRunning, GameState* currentGameState, MenuState* currentMenuState, Player* player, 
                   bool* loadError, SDL_Event* event, char* currentMapName, int map[MAP_ROWS][MAP_COLS], int* chooseMap) 
 {
@@ -509,6 +537,23 @@ void calculateSrcRect(SDL_Rect *srcRect, Direction direction, int currentFrame)
     }
 }
 
+/**
+ * This function will render the scene based on the current state
+ * 
+ * @param renderer the renderer that will be used to render the scene
+ * @param currentGameState the current game state
+ * @param currentMenuState the current menu state
+ * @param player the player struct, intended for the main character
+ * @param loadError the load error variable to determine whether we are in the load error state or not
+ * @param currentMapName the current map name
+ * @param map the map that will be loaded in association with the current map name
+ * @param menuTextures the textures for the menu
+ * @param gameTextures the textures for the game
+ * @param lastMoveTime the time of the last movement
+ * @param chooseMap the variable to determine which map to next load
+ * 
+ * @return void
+ */
 void render(SDL_Renderer** renderer, GameState* currentGameState, MenuState* currentMenuState, Player* player, 
             bool* loadError, char** currentMapName, int map[MAP_ROWS][MAP_COLS], SDL_Texture** menuTextures, 
             SDL_Texture** gameTextures, Uint32* lastMoveTime, int* chooseMap)
@@ -778,8 +823,6 @@ void render(SDL_Renderer** renderer, GameState* currentGameState, MenuState* cur
 
 }
 
-// CITATION: ChatGPT helped me with learning SDL and SDL_image
-// prompt given: can you teach me about using the sdl library in c
 /**
  * This thread function will run the game
  * 
@@ -811,13 +854,7 @@ void* game ()
   // Load the menu textures
   SDL_Texture *menuTextures[MAX_GAME_TEXTURES];
   int menuTextureCount = loadMenuTextures(menuTextures, &renderer);
-
-/*
-  SDL_Texture *menuSave = IMG_LoadTexture(renderer, "assets/textures/menu/menu_save.png");
-  SDL_Texture *menuLoad = IMG_LoadTexture(renderer, "assets/textures/menu/menu_load.png");
-  SDL_Texture *menuLoadError = IMG_LoadTexture(renderer, "assets/textures/menu/menu_load_error.png");
-  SDL_Texture *menuExit = IMG_LoadTexture(renderer, "assets/textures/menu/menu_exit.png");
-*/
+  
   // Load ALL the scene textures
   SDL_Texture *gameTextures[MAX_GAME_TEXTURES];
   int textureCount = loadTextures(gameTextures, &renderer);
@@ -898,8 +935,6 @@ void* game ()
   return NULL;
 }
 
-// CITATION: ChatGPT helped me with learning SDL2/SDL_mixer
-// prompt given: Can you teach me how to play music using SDL
 /**
  * This thread function will run the music
  * 
