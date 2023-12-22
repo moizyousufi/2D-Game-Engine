@@ -50,7 +50,7 @@ MenuState currentMenuState = SAVE;
 typedef enum { RIGHT, LEFT, UP, DOWN, IDLE_RIGHT, IDLE_LEFT, IDLE_UP, IDLE_DOWN } Direction;
 
 // Define map types
-typedef enum { PERLLERT_TOWN, PKRMN_CTR } MapType;
+typedef enum { PERLLERT_TOWN, PKRMN_CTR, VILLAGE_RUINS } MapType;
 
 // Structs for managing game data
 typedef struct 
@@ -150,6 +150,8 @@ int loadTextures (SDL_Texture** textures, SDL_Renderer** renderer)
   textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/ctr_wall2.png");
   textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/ctr_wall3.png");
   textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/ctr_wall4.png");
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/village_exit.png");
+  textures[i++] = IMG_LoadTexture(*renderer, "assets/textures/world/perllert1_exit.png");
 
   return i;
 }
@@ -205,15 +207,15 @@ void loadMap(int map[MAP_ROWS][MAP_COLS], MapType mapType)
       // Map layout for Perllert Town
       int perllert_town_map[MAP_ROWS][MAP_COLS] = 
       {
-        {1, 1, 1, 1, 1, 1, 1, 1, 0, 1}, // 1 represents a wall
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, // 0 represents a walkable tile
-        {1, 0, 0, 0, 0, 1, 1, 0, 0, 1}, 
-        {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, 
-        {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, 
-        {1, 0, 1, 0, 0, 0, 1, 0, 0, 1}, 
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 2}, // 2 represents an exit point
-        {1, 0, 0, 0, 0, 0, 0, 0, 0, 2}, 
-        {1, 0, 0, 1, 1, 1, 1, 1, 1, 1}, 
+        {1, 1, 1, 1, 1, 1, 1, 1, 12, 1}, // 1 represents a wall, 12 represents an exit point
+        {1, 0, 0, 0, 0, 0, 0, 0, 0,  1}, // 0 represents a walkable tile
+        {1, 0, 0, 0, 0, 1, 1, 0, 0,  1}, 
+        {1, 0, 0, 0, 0, 0, 1, 0, 0,  1}, 
+        {1, 0, 0, 0, 0, 0, 1, 0, 0,  1}, 
+        {1, 0, 1, 0, 0, 0, 1, 0, 0,  1}, 
+        {1, 0, 0, 0, 0, 0, 0, 0, 0,  2}, // 2 represents an exit point
+        {1, 0, 0, 0, 0, 0, 0, 0, 0,  2}, 
+        {1, 0, 0, 1, 1, 1, 1, 1, 1,  1}, 
       };
       memmove(map, perllert_town_map, sizeof(perllert_town_map));
       break;
@@ -234,6 +236,24 @@ void loadMap(int map[MAP_ROWS][MAP_COLS], MapType mapType)
         {6, 7,  6,  7,  6, 7, 6,  7,  6,  7}, 
       };
       memmove(map, pkrmrn_ctr_map, sizeof(pkrmrn_ctr_map));
+      break;
+    }
+    case VILLAGE_RUINS:
+    {
+      // Map layout for Village Ruins
+      int village_ruins_map[MAP_ROWS][MAP_COLS] = 
+      {
+        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, 
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, 
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, 
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, 
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, 
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, 
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, // 13 represents exit point
+        {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, 
+        {1, 1, 1, 1, 1, 1, 1, 1, 13, 1}, 
+      };
+      memmove(map, village_ruins_map, sizeof(village_ruins_map));
       break;
     }
   }
@@ -629,6 +649,26 @@ void render(SDL_Renderer** renderer, GameState* currentGameState, MenuState* cur
             // case we are moving up
             newY -= TILE_HEIGHT; 
             moved = 1;
+
+            // determine if we are at an exit point
+            switch (map[gridY][gridX])
+            {
+              case 12:
+                // setup changing map
+                switchMap = true;
+                *chooseMap = 3;
+
+                // setup starting coordinates
+                newX = (*player).x - X_OFFSET;
+                newY = MAP_ROWS * TILE_HEIGHT;
+                moved = 0;
+
+                // setup music
+                musicSelector = 3;
+                break;
+              default:
+                break;
+            }
           }
           else if (state[SDL_SCANCODE_A]) 
           {
@@ -667,6 +707,26 @@ void render(SDL_Renderer** renderer, GameState* currentGameState, MenuState* cur
             // case we are moving down
             newY += TILE_HEIGHT;
             moved = 1;
+
+            // determine if we are at an exit point
+            switch (map[gridY][gridX])
+            {
+              case 13:
+                // setup changing map
+                switchMap = true;
+                *chooseMap = 1;
+
+                // setup starting coordinates
+                newX = (*player).x - X_OFFSET;
+                newY = -TILE_HEIGHT;
+                moved = 0;
+
+                // setup music
+                musicSelector = 1;
+                break;
+              default:
+                break;
+            }
           }
           else if (state[SDL_SCANCODE_D]) 
           {
@@ -728,6 +788,9 @@ void render(SDL_Renderer** renderer, GameState* currentGameState, MenuState* cur
             case 2:
               *currentMapName = "pkrmrn_ctr_map";
               break;
+            case 3:
+              *currentMapName = "village_ruins_map";
+              break;
             default:
               break;
           } 
@@ -742,6 +805,9 @@ void render(SDL_Renderer** renderer, GameState* currentGameState, MenuState* cur
                 break;
               case 2:
                 loadMap(map, PKRMN_CTR);
+                break;
+              case 3:
+                loadMap(map, VILLAGE_RUINS);
                 break;
               default:
                 break;
@@ -775,6 +841,8 @@ void render(SDL_Renderer** renderer, GameState* currentGameState, MenuState* cur
               case 5:
               case 6:
               case 7:
+              case 12:
+              case 13:
                 // ensure the character is within map bounds
                 (*player).x = newX;
                 (*player).y = newY;
@@ -949,8 +1017,9 @@ void* music()
   Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048);
 
   // Load music tracks
-  Mix_Music *music1 = Mix_LoadMUS("assets/audio/perllert_town_music.wav");
-  Mix_Music *music2 = Mix_LoadMUS("assets/audio/perkemern_center.wav");
+  Mix_Music *perllert_town_music = Mix_LoadMUS("assets/audio/perllert_town_music.wav");
+  Mix_Music *perkemern_center = Mix_LoadMUS("assets/audio/perkemern_center.wav");
+  Mix_Music *village_ruins_music = Mix_LoadMUS("assets/audio/village_ruins_music.wav");
   
   bool running = true; // control variable for the main loop
 
@@ -980,13 +1049,17 @@ void* music()
           break;
         case 0:
           break;
-        // perllert town music case
+        // perllert town music
         case 1:
-          Mix_PlayMusic(music1, -1);
+          Mix_PlayMusic(perllert_town_music, -1);
           break;
-        // perkemern center case
+        // perkemern center music
         case 2:
-          Mix_PlayMusic(music2, -1);
+          Mix_PlayMusic(perkemern_center, -1);
+          break;
+        // village ruins music
+        case 3:
+          Mix_PlayMusic(village_ruins_music, -1);
           break;
       }
 
@@ -998,8 +1071,9 @@ void* music()
   }
 
   // Cleanup
-  Mix_FreeMusic(music1);
-  Mix_FreeMusic(music2);
+  Mix_FreeMusic(perllert_town_music);
+  Mix_FreeMusic(perkemern_center);
+  Mix_FreeMusic(village_ruins_music);
   Mix_CloseAudio();
 
   return NULL;
