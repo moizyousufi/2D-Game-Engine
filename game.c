@@ -1090,9 +1090,16 @@ int main () //(int argc, char* argv[])
   pthread_t threads[2];
 
   // game thread for handling the game and user input
-  pthread_create(&threads[0], NULL, game, NULL);
+  int ret = pthread_create(&threads[0], NULL, game, NULL);
   // music thread for handling the music
-  pthread_create(&threads[1], NULL, music, NULL);
+  int ret1 = pthread_create(&threads[1], NULL, music, NULL);
+
+  // error check for failed thread launch
+  if (ret != 0 || ret1 != 0) 
+  {
+    fprintf(stderr, "pthread_create failed: %s\n", strerror(ret));
+    // Handle error (e.g., try again, abort, etc.)
+  }
 
   // join the threads to prevent the program from closing before the threads are done
   pthread_join(threads[0], NULL);
