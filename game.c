@@ -269,7 +269,7 @@ void loadMap(int map[MAP_ROWS][MAP_COLS], MapType mapType)
  * 
  * @return void
  */
-void saveGame (int x, int y, char* currentMap, int musicSelector) 
+void saveGame (int x, int y, char* currentMap) 
 {
   // Try to create a directory for the save file (if it doesn't exist)
   // this works because mkdir doesn't do anything if the directory already exists
@@ -297,6 +297,137 @@ void saveGame (int x, int y, char* currentMap, int musicSelector)
   fprintf(saveFile, "ypos: %d\n", gridY);
 
   fclose(saveFile);
+}
+
+/**
+ * This function will load the game state from a file
+ * 
+ * @param loadError the load error variable to determine whether we are in the load error state or not
+ * @param player the player struct, intended for the main character
+ * @param map the map that will be loaded in association with the current map name
+ * @param chooseMap the variable to determine which map to next load
+ * 
+ * @return void
+ */
+void loadGame(bool *loadError, Player *player, int map[MAP_ROWS][MAP_COLS], int *chooseMap)   
+{
+  // load the game
+  FILE* saveFile = fopen("save_data/save.txt", "r");
+  char line[100]; // Array to hold each line of the file
+
+  // Check if the file exists
+  if (saveFile == NULL) 
+  {
+    *loadError = true;
+    return;
+  }
+
+  // Read the file line by line
+  while (fgets(line, sizeof(line), saveFile) != NULL) 
+  {
+    // set up our checks in the save file
+    char mapPrefix[] = "map: ";
+    char musicPrefix[] = "music: ";
+    char xposPrefix[] = "xpos: ";
+    char yposPrefix[] = "ypos: ";
+
+    // check to see if the line is a map line
+    if(strncmp(mapPrefix, line, strlen(mapPrefix)) == 0)
+    {
+      // ensure that the line has a value
+      if(strlen(line) <= strlen(mapPrefix))
+      {
+        *loadError = true;
+        printf("map prefix has no value\n");
+        break;
+      }
+
+      // we will select the map based on the string after the prefix
+      char* mapChoice = line + strlen(mapPrefix);
+      
+      // now we have the map choice, we can change the map variable
+      // 18 is the number of characters in "perllert_town_map", not magic number
+      if(strncmp("perllert_town_map", mapChoice, strlen("perllert_town_map")) == 0)
+      {
+        loadMap(map, PERLLERT_TOWN);
+        *chooseMap = 1;
+      }
+      else if(strncmp("pkrmrn_ctr_map", mapChoice, strlen("pkrmrn_ctr_map")) == 0)
+      {
+        loadMap(map, PKRMN_CTR);
+        *chooseMap = 2;
+      }
+      else if(strncmp("village_ruins_map", mapChoice, strlen("village_ruins_map")) == 0)
+      {
+        loadMap(map, VILLAGE_RUINS);
+        *chooseMap = 3;
+      }
+    }
+    // check to see if the line is a music line
+    else if(strncmp(musicPrefix, line, strlen(musicPrefix)) == 0)
+    {
+      // ensure that the line has a value
+      if(strlen(line) <= strlen(musicPrefix))
+      {
+        *loadError = true;
+        printf("music prefix has no value\n");
+        break;
+      }
+
+      char musicChoice[100];
+      for (int i = (int) strlen(musicPrefix); i < (int) strlen(line) - 1; ++i)
+      {                    
+        // we will select the music based on the value after the prefix
+        musicChoice[i - strlen(musicPrefix)] = line[i];
+      }
+
+      musicSelector = atoi(musicChoice);
+    }
+    // check to see if the line is an xpos line
+    else if(strncmp(xposPrefix, line, strlen(xposPrefix)) == 0)
+    {
+      // ensure that the line has a value
+      if(strlen(line) <= strlen(xposPrefix))
+      {
+        *loadError = true;
+        printf("xpos prefix has no value\n");
+        break;
+      }
+
+      char xChoice[100];
+      for (int i = (int) strlen(xposPrefix); i < (int) strlen(line) - 1; ++i)
+      {
+        // we will select the x pos based on the value after the prefix
+        xChoice[i - strlen(xposPrefix)] = line[i];
+      }
+      // reading in xpos
+      (*player).x = atoi(xChoice) * TILE_WIDTH + X_OFFSET;
+
+    }
+    // check to see if the line is a ypos line
+    else if(strncmp(yposPrefix, line, strlen(yposPrefix)) == 0)
+    {
+      // ensure that the line has a value
+      if(strlen(line) <= strlen(yposPrefix))
+      {
+        *loadError = true;
+        printf("ypos prefix has no value\n");
+        break;
+      }
+
+      char yChoice[100];
+      for (int i = (int) strlen(yposPrefix); i < (int) strlen(line) - 1; ++i)
+      {
+        // we will select the x pos based on the value after the prefix
+        yChoice[i - strlen(yposPrefix)] = line[i];
+      }
+      // reading in ypos
+      (*player).y = atoi(yChoice) * TILE_HEIGHT;
+    }
+  }
+  // close the file for safety
+  fclose(saveFile);
+  
 }
 
 /**
@@ -342,7 +473,7 @@ void HandleEvents(int* isRunning, GameState* currentGameState, MenuState* curren
                     // handle save case
                     case SAVE:
                       // save the game by calling our saveGame function
-                      saveGame((*player).x, (*player).y, currentMapName, musicSelector);
+                      saveGame((*player).x, (*player).y, currentMapName);
                       break;
                     // handle exit menu case
                     case EXIT:
@@ -359,117 +490,9 @@ void HandleEvents(int* isRunning, GameState* currentGameState, MenuState* curren
                         break;
                       }
 
-                      // load the game
-                      FILE* saveFile = fopen("save_data/save.txt", "r");
-                      char line[100]; // Array to hold each line of the file
-
-                      // Check if the file exists
-                      if (saveFile == NULL) 
-                      {
-                        *loadError = true;
-                        break;
-                      }
-
-                      // Read the file line by line
-                      while (fgets(line, sizeof(line), saveFile) != NULL) 
-                      {
-                        // set up our checks in the save file
-                        char mapPrefix[] = "map: ";
-                        char musicPrefix[] = "music: ";
-                        char xposPrefix[] = "xpos: ";
-                        char yposPrefix[] = "ypos: ";
-
-                        // check to see if the line is a map line
-                        if(strncmp(mapPrefix, line, strlen(mapPrefix)) == 0)
-                        {
-                          // ensure that the line has a value
-                          if(strlen(line) <= strlen(mapPrefix))
-                          {
-                            *loadError = true;
-                            printf("map prefix has no value\n");
-                            break;
-                          }
-
-                          // we will select the map based on the string after the prefix
-                          char* mapChoice = line + strlen(mapPrefix);
-                          
-                          // now we have the map choice, we can change the map variable
-                          // 18 is the number of characters in "perllert_town_map", not magic number
-                          if(strncmp("perllert_town_map", mapChoice, strlen("perllert_town_map")) == 0)
-                          {
-                            loadMap(map, PERLLERT_TOWN);
-                            *chooseMap = 1;
-                          }
-                          else if(strncmp("pkrmrn_ctr_map", mapChoice, strlen("pkrmrn_ctr_map")) == 0)
-                          {
-                            loadMap(map, PKRMN_CTR);
-                            *chooseMap = 2;
-                          }
-                        }
-                        // check to see if the line is a music line
-                        else if(strncmp(musicPrefix, line, strlen(musicPrefix)) == 0)
-                        {
-                          // ensure that the line has a value
-                          if(strlen(line) <= strlen(musicPrefix))
-                          {
-                            *loadError = true;
-                            printf("music prefix has no value\n");
-                            break;
-                          }
-
-                          char musicChoice[100];
-                          for (int i = (int) strlen(musicPrefix); i < (int) strlen(line) - 1; ++i)
-                          {                    
-                            // we will select the music based on the value after the prefix
-                            musicChoice[i - strlen(musicPrefix)] = line[i];
-                          }
-
-                          musicSelector = atoi(musicChoice);
-                        }
-                        // check to see if the line is an xpos line
-                        else if(strncmp(xposPrefix, line, strlen(xposPrefix)) == 0)
-                        {
-                          // ensure that the line has a value
-                          if(strlen(line) <= strlen(xposPrefix))
-                          {
-                            *loadError = true;
-                            printf("xpos prefix has no value\n");
-                            break;
-                          }
-
-                          char xChoice[100];
-                          for (int i = (int) strlen(xposPrefix); i < (int) strlen(line) - 1; ++i)
-                          {
-                            // we will select the x pos based on the value after the prefix
-                            xChoice[i - strlen(xposPrefix)] = line[i];
-                          }
-                          // reading in xpos
-                          (*player).x = atoi(xChoice) * TILE_WIDTH + X_OFFSET;
-
-                        }
-                        // check to see if the line is a ypos line
-                        else if(strncmp(yposPrefix, line, strlen(yposPrefix)) == 0)
-                        {
-                          // ensure that the line has a value
-                          if(strlen(line) <= strlen(yposPrefix))
-                          {
-                            *loadError = true;
-                            printf("ypos prefix has no value\n");
-                            break;
-                          }
-
-                          char yChoice[100];
-                          for (int i = (int) strlen(yposPrefix); i < (int) strlen(line) - 1; ++i)
-                          {
-                            // we will select the x pos based on the value after the prefix
-                            yChoice[i - strlen(yposPrefix)] = line[i];
-                          }
-                          // reading in ypos
-                          (*player).y = atoi(yChoice) * TILE_HEIGHT;
-                        }
-                      }
-                      // close the file for safety
-                      fclose(saveFile);
+                      // load the game by calling our loadGame function
+                      loadGame(loadError, player, map, chooseMap);
+                      
                       break;
                     default:
                       break;
