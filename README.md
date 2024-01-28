@@ -21,7 +21,7 @@ Using the `cd` command, navigate to the folder containing `game.c` and `makefile
 make
 ```
 
-Keep in mind, the game engine, in its current state, would require assets from directories (as listed in the code when loading in textures). Resultingly, this may entail that you provide your own textures. I am using Nintendo-related textures for testing, and that would result in likely Copyright-related issues if I provided them for usage or put them out for production in any scenario.
+Keep in mind, the game engine, in its current state, would require assets from directories (as listed in the code when loading in textures). Resultingly, this may entail that you provide your own textures. I am using Nintendo-related textures for testing, and that would result in likely Copyright-related issues if I provided them / uploaded to GitHub for usage or put them out for production in any scenario.
 
 Once the program has compiled, run:
 
