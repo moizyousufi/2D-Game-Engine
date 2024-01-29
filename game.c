@@ -15,8 +15,8 @@
 #define MAP_ROWS 9
 #define MAP_COLS 10
 #define FPS 1200
-#define X_RESOLUTION 160
-#define Y_RESOLUTION 144
+#define X_RESOLUTION TILE_WIDTH * 10 // 160 for 16 width
+#define Y_RESOLUTION TILE_HEIGHT * 9 // 144 for 16 height
 #define MOVEMENT_DELAY 150
 #define RES_SCALE 8
 #define MENU_ITEM_COUNT 3
@@ -932,7 +932,7 @@ void* game ()
   // set up the window and renderer
   setupWindow(&window, &renderer);
 
-  int isRunning = 1; // control variable for the main loop
+  int isRunning = true; // control variable for the main loop
   Player mainCharacter = {(X_RESOLUTION - TILE_WIDTH) / 2, // default x position
                           (Y_RESOLUTION - TILE_HEIGHT) / 2, // default y position
                           IDLE_DOWN, // default direction
@@ -1020,6 +1020,7 @@ void* game ()
 
   SDL_DestroyRenderer(renderer); 
   SDL_DestroyWindow(window);
+  IMG_Quit(); 
   
   // set the music selector to -1 to signal the music thread to close
   musicSelector = -1;
@@ -1120,8 +1121,8 @@ int main () //(int argc, char* argv[])
   // error check for failed thread launch
   if (ret != 0 || ret1 != 0) 
   {
-    fprintf(stderr, "pthread_create failed: %s\n", strerror(ret));
-    // Handle error (e.g., try again, abort, etc.)
+    perror("pthread_create failed\n"); 
+    exit(1);
   }
 
   // join the threads to prevent the program from closing before the threads are done
@@ -1130,7 +1131,6 @@ int main () //(int argc, char* argv[])
   
   // SDL_Quit is called here to prevent a forced shutdown of the other thread
   // that could potentially cause concurrency issues if we quit before thread closing
-  IMG_Quit(); 
   SDL_Quit();
 
   return 0;
