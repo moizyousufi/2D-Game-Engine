@@ -81,13 +81,13 @@ void initSDL ()
   // error checking for SDL and SDL_image
   if (SDL_Init(SDL_INIT_VIDEO) < 0) 
   {
-    fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+    cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << endl;
     return;
   }
 
   if (!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) 
   {
-    fprintf(stderr, "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError());
+    cerr << "SDL could not initialize! SDL_image Error: " << IMG_GetError() << endl;
     SDL_Quit();
     return;
   }
@@ -113,7 +113,7 @@ void setupWindow (SDL_Window** window, SDL_Renderer** renderer)
   // make sure window runs successfully
   if (!(*window)) 
   {
-    fprintf(stderr, "Window could not be created! SDL_Error: %s\n", SDL_GetError());
+    cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << endl;
     IMG_Quit();
     SDL_Quit();
     return;
@@ -124,7 +124,7 @@ void setupWindow (SDL_Window** window, SDL_Renderer** renderer)
   // make sure renderer runs successfully
   if (!(*renderer)) 
   {
-    fprintf(stderr, "Renderer could not be created! SDL_Error: %s\n", SDL_GetError());
+    cerr << "Renderer could not be created! SDL_Error: " << SDL_GetError() << endl;
     SDL_DestroyWindow(*window);
     IMG_Quit();
     SDL_Quit();
@@ -276,7 +276,6 @@ void loadMap(int map[MAP_ROWS][MAP_COLS], MapType mapType)
  * @param x the x position of the player
  * @param y the y position of the player
  * @param currentMap the current map that the player is on
- * @param musicSelector the current music that is playing
  * 
  * @return void
  */
@@ -299,22 +298,17 @@ void saveGame (int x, int y, string& currentMap)
 
   // save the current map
   saveFile << "map: " << currentMap << endl;
-  //fprintf(saveFile, "map: %s\n", currentMap);
 
   // save the music state
   saveFile << "music: " << musicSelector << endl;
-  //fprintf(saveFile, "music: %d\n", musicSelector);
 
   // convert the player's position to grid coordinates and save
   int gridX = (x - X_OFFSET) / TILE_WIDTH;
   int gridY = y / TILE_HEIGHT;
   saveFile << "xpos: " << gridX << endl;
-  //fprintf(saveFile, "xpos: %d\n", gridX);
   saveFile << "ypos: " << gridY << endl;
-  //fprintf(saveFile, "ypos: %d\n", gridY);
 
   saveFile.close();
-  //fclose(saveFile);
 }
 
 /**
@@ -356,7 +350,7 @@ void loadGame(bool *loadError, Player *player, int map[MAP_ROWS][MAP_COLS], int 
       if(strlen(line) <= strlen(mapPrefix))
       {
         *loadError = true;
-        printf("map prefix has no value\n");
+        cout << "map prefix has no value" << endl; 
         break;
       }
 
@@ -388,7 +382,7 @@ void loadGame(bool *loadError, Player *player, int map[MAP_ROWS][MAP_COLS], int 
       if(strlen(line) <= strlen(musicPrefix))
       {
         *loadError = true;
-        printf("music prefix has no value\n");
+        cout << "music prefix has no value" << endl;
         break;
       }
 
@@ -408,7 +402,7 @@ void loadGame(bool *loadError, Player *player, int map[MAP_ROWS][MAP_COLS], int 
       if(strlen(line) <= strlen(xposPrefix))
       {
         *loadError = true;
-        printf("xpos prefix has no value\n");
+        cout << "xpos prefix has no value" << endl;
         break;
       }
 
@@ -429,7 +423,7 @@ void loadGame(bool *loadError, Player *player, int map[MAP_ROWS][MAP_COLS], int 
       if(strlen(line) <= strlen(yposPrefix))
       {
         *loadError = true;
-        printf("ypos prefix has no value\n");
+        cout << "ypos prefix has no value" << endl;
         break;
       }
 
@@ -1021,7 +1015,7 @@ void* game ()
         startTicks = SDL_GetTicks();
 
         // Display or use the FPS value
-        printf("FPS: %.2f\n", fps);
+        cout << "FPS: " << fps << endl;
     }
     
 
@@ -1129,7 +1123,7 @@ void* music()
  * 
  * @return 0
  */
-int main () //(int argc, char* argv[])
+int main () 
 {
   // create two threads to run in parallel
   vector<thread> threads;
