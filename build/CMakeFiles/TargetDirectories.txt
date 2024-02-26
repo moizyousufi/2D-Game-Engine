@@ -1,0 +1,3 @@
+/mnt/c/Users/moizy/OneDrive/Documents/VS Code Programs/CSC_324_Project/GCE-Backend/build/CMakeFiles/Game.dir
+/mnt/c/Users/moizy/OneDrive/Documents/VS Code Programs/CSC_324_Project/GCE-Backend/build/CMakeFiles/edit_cache.dir
+/mnt/c/Users/moizy/OneDrive/Documents/VS Code Programs/CSC_324_Project/GCE-Backend/build/CMakeFiles/rebuild_cache.dir
