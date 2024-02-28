@@ -1,0 +1,17 @@
+# Sprint Review
+
+The purpose of this sprint review is to record what our team has completed in each sprint 
+in terms of experimentation, setup, and product development.
+
+Each sprint review answers to the questions below:
+    1. How has your product improved or progressed from a customer perspective?
+    2. What progress have you made that is not visible to a common user?
+
+
+# Sprint Review 1
+Date: Feb 27, 2024
+1. In this sprint, we decided ...
+    - how the user moves the characters (dragging instead of arrows, touch, etc.)
+    - how the game shows the NPC dialogue (pop-ups instead of full screen)
+2. We decided the grid and pixel size for the game and ported the game engine from the original C code to C++.
+    However, we may swap to established game engine such as Unity or Godot.
