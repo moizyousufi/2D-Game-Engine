@@ -9,4 +9,8 @@ As of right now, our repository layout consists mostly of the Godot Engine files
 We have our backlog at the following link: https://github.com/orgs/The-Grinnell-College-Experience-Team/projects/1
 Thanks to Github Issues, here we will be able to communicate and track any issues that may arise.
 
+### Spring Planning Reports
+Each sprint planning report can be found in `sprintPlanning.txt` in this repository.
 
+### Sprint Review Reports
+Each sprint review report can be found in `sprintReview.txt` in this repository.
