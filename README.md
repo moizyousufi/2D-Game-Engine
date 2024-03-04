@@ -6,7 +6,7 @@ We want to create a video game that uses 32x32 pixels textures to recreate Grinn
 ### Layout
 As of right now, our repository layout consists mostly of the Godot Engine files and the `assets`, `scripts`, and `scenes` folder. We will likely add many things and the scrips will either be in GDScript or C#, most likely. We may potentially also add C++, but that is unlikely. However, if we switch to an established game engine, then this will change completely to match the git requirements of project code for the respective game engine.
 
-We have our backlog at the following link: https://github.com/orgs/The-Grinnell-College-Experience-Team/projects/1
+We have our backlog at the following link: https://github.com/orgs/The-Grinnell-College-Experience-Team/projects
 Thanks to Github Issues, here we will be able to communicate and track any issues that may arise.
 
 ### Spring Planning Reports
