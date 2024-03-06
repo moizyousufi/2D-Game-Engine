@@ -1,6 +1,6 @@
 [gd_scene load_steps=19 format=3 uid="uid://c6jugsafmapo3"]
 
-[ext_resource type="Texture2D" uid="uid://d2lmq2n7hac6l" path="res://assets/textures/maps/grass_tiles/shitty.png" id="1_8vt3i"]
+[ext_resource type="Texture2D" uid="uid://d2lmq2n7hac6l" path="res://assets/textures/MapTiles/shitty.png" id="1_8vt3i"]
 [ext_resource type="Texture2D" uid="uid://c06j3e8iveqik" path="res://assets/textures/characters/animated/sprite_03.png" id="1_37030"]
 [ext_resource type="Texture2D" uid="uid://b07ms6rm6yl4j" path="res://assets/textures/characters/animated/sprite_00.png" id="1_cf6l1"]
 [ext_resource type="Script" path="res://scripts/camera.gd" id="1_s4xu2"]
@@ -118,4 +118,4 @@ script = ExtResource("13_ry33a")
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="CharacterBody2D"]
 position = Vector2(646, 370)
 sprite_frames = SubResource("SpriteFrames_oirre")
-animation = &"walk_up"
+animation = &"left"

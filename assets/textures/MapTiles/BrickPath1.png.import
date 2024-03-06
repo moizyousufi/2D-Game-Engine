@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d2lmq2n7hac6l"
-path="res://.godot/imported/shitty.png-fb95b27cf6887700d78f893ddbc7fdad.ctex"
+uid="uid://hpa3rqt7cb37"
+path="res://.godot/imported/BrickPath1.png-d6453c8b0da74d73f43d21858f543279.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/maps/grass_tiles/shitty.png"
-dest_files=["res://.godot/imported/shitty.png-fb95b27cf6887700d78f893ddbc7fdad.ctex"]
+source_file="res://assets/textures/MapTiles/BrickPath1.png"
+dest_files=["res://.godot/imported/BrickPath1.png-d6453c8b0da74d73f43d21858f543279.ctex"]
 
 [params]
 
