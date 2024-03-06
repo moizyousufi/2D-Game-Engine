@@ -7,6 +7,16 @@ Each sprint review answers to the questions below:
     1. How has your product improved or progressed from a customer perspective?
     2. What progress have you made that is not visible to a common user?
 
+# Sprint Review 2
+Date: Mar 05, 2024
+1. In this sprint, we ...
+    - created the sample characters and implemented their movement.
+    - made a barebone system that sets up a giant map.
+    These implementation will be further developed in detail to suit our game in a later sprint.
+2. This is not exactly about the actual development, but discussed about 
+    - our game's architecture and design.
+    - which classes will we make for each component.
+    - what can be added to our game since the game engine can already handle most of the basic game features.
 
 # Sprint Review 1
 Date: Feb 27, 2024
