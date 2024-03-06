@@ -1,7 +1,9 @@
-[gd_scene load_steps=15 format=3 uid="uid://c6jugsafmapo3"]
+[gd_scene load_steps=19 format=3 uid="uid://c6jugsafmapo3"]
 
+[ext_resource type="Texture2D" uid="uid://d2lmq2n7hac6l" path="res://assets/textures/maps/grass_tiles/shitty.png" id="1_8vt3i"]
 [ext_resource type="Texture2D" uid="uid://c06j3e8iveqik" path="res://assets/textures/characters/animated/sprite_03.png" id="1_37030"]
 [ext_resource type="Texture2D" uid="uid://b07ms6rm6yl4j" path="res://assets/textures/characters/animated/sprite_00.png" id="1_cf6l1"]
+[ext_resource type="Script" path="res://scripts/camera.gd" id="1_s4xu2"]
 [ext_resource type="Texture2D" uid="uid://cfffuw4vbo7w7" path="res://assets/textures/characters/animated/sprite_01.png" id="2_7dxc3"]
 [ext_resource type="Texture2D" uid="uid://bh8eo7t60d1k6" path="res://assets/textures/characters/animated/sprite_02.png" id="2_rfoy1"]
 [ext_resource type="Texture2D" uid="uid://dua7ltv28a6eg" path="res://assets/textures/characters/animated/sprite_04.png" id="3_lxuy0"]
@@ -13,6 +15,15 @@
 [ext_resource type="Texture2D" uid="uid://crt7hqpx18p00" path="res://assets/textures/characters/animated/sprite_06.png" id="7_6qcwu"]
 [ext_resource type="Texture2D" uid="uid://dan3c4v80q4b6" path="res://assets/textures/characters/animated/sprite_07.png" id="8_77wxr"]
 [ext_resource type="Script" path="res://scenes/AnimatedSprite2D.gd" id="13_ry33a"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_01o70"]
+texture = ExtResource("1_8vt3i")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_lbakv"]
+tile_size = Vector2i(32, 32)
+sources/1 = SubResource("TileSetAtlasSource_01o70")
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_oirre"]
 animations = [{
@@ -94,9 +105,17 @@ animations = [{
 }]
 
 [node name="Player" type="Area2D"]
+script = ExtResource("1_s4xu2")
 
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+[node name="TileMap" type="TileMap" parent="."]
+tile_set = SubResource("TileSet_lbakv")
+format = 2
+layer_0/tile_data = PackedInt32Array(0, 1, 0, 1, 1, 0, 2, 1, 0, 65536, 1, 0, 65537, 1, 0, 65538, 1, 0, 131074, 1, 0, 131075, 1, 0, 131076, 1, 0, 131077, 1, 0, 131078, 1, 0, 196615, 1, 0, 196616, 1, 0, 262153, 1, 0, 262154, 1, 0, 327691, 1, 0, 327692, 1, 0, 393228, 1, 0, 393229, 1, 0, 458766, 1, 0, 524302, 1, 0, 524303, 1, 0, 589840, 1, 0, 589841, 1, 0, 655377, 1, 0, 3, 1, 0, -65533, 1, 0, -65532, 1, 0, -131067, 1, 0, -196602, 1, 0, -196601, 1, 0, -262136, 1, 0, -327671, 1, 0, -393206, 1, 0, -393205, 1, 0, -458740, 1, 0, -458739, 1, 0, -458738, 1, 0, -524273, 1, 0, -524272, 1, 0, -589807, 1, 0, -589806, 1, 0, -589805, 1, 0, -589804, 1, 0, -589803, 1, 0, -589802, 1, 0, -589801, 1, 0, -589800, 1, 0, -589799, 1, 0, -524264, 1, 0, -458729, 1, 0, -393193, 1, 0, -327657, 1, 0, -262122, 1, 0, -196586, 1, 0, -131050, 1, 0, -65514, 1, 0, 22, 1, 0, 65559, 1, 0, 65560, 1, 0, 65561, 1, 0, 65562, 1, 0)
+
+[node name="CharacterBody2D" type="CharacterBody2D" parent="."]
+script = ExtResource("13_ry33a")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="CharacterBody2D"]
 position = Vector2(646, 370)
 sprite_frames = SubResource("SpriteFrames_oirre")
 animation = &"walk_up"
-script = ExtResource("13_ry33a")
