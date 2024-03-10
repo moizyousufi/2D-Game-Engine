@@ -1,5 +1,10 @@
 extends CharacterBody2D
 
+# Node references
+@onready var animation_sprite = $AnimatedSprite2D
+@onready var animation_player = $AnimationPlayer
+@onready var ray_cast = $RayCast2D
+
 # this will determine the player's speed
 var speed = 200
 
@@ -22,7 +27,6 @@ var isMoved = false
 func _ready():
 	pass # Replace with function body.
 
-
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
 	var motion = Vector2()
@@ -30,7 +34,6 @@ func _process(delta):
 	var moveLeft = Input.is_action_pressed('move_left')
 	var moveUp = Input.is_action_pressed('move_up')
 	var moveDown = Input.is_action_pressed('move_down')
-	
 	
 	if moveRight:
 		motion.x += 100
@@ -56,6 +59,9 @@ func _process(delta):
 			$AnimatedSprite2D.play(animation_walk_down)
 		movedDir = idle_state.DOWN
 		isMoved = true
+	# Turn RayCast2D toward movement direction  
+	if motion != Vector2.ZERO:
+		ray_cast.target_position = motion.normalized() * 50
 	
 	match isMoved:
 		false:
@@ -74,3 +80,14 @@ func _process(delta):
 	
 	isMoved = false
 	pass
+
+func _input(event):
+	#interact with world        
+	if event.is_action_pressed("ui_interact"):
+		var target = ray_cast.get_collider()
+		if target != null:
+			if target.is_in_group("NPC"):
+				# Talk to NPC
+				target.dialog()
+	else:
+		pass

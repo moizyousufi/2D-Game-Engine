@@ -1,22 +1,9 @@
-[gd_scene load_steps=24 format=3 uid="uid://c6jugsafmapo3"]
+[gd_scene load_steps=11 format=3 uid="uid://c6jugsafmapo3"]
 
 [ext_resource type="Texture2D" uid="uid://d2lmq2n7hac6l" path="res://assets/textures/MapTiles/shitty.png" id="1_8vt3i"]
 [ext_resource type="Script" path="res://scripts/camera.gd" id="1_s4xu2"]
-[ext_resource type="Texture2D" uid="uid://c06j3e8iveqik" path="res://assets/textures/characters/animated/sprite_03.png" id="4_6ilo3"]
-[ext_resource type="Texture2D" uid="uid://cfffuw4vbo7w7" path="res://assets/textures/characters/animated/sprite_01.png" id="5_ir80a"]
-[ext_resource type="Texture2D" uid="uid://b07ms6rm6yl4j" path="res://assets/textures/characters/animated/sprite_00.png" id="6_re817"]
-[ext_resource type="Texture2D" uid="uid://bh8eo7t60d1k6" path="res://assets/textures/characters/animated/sprite_02.png" id="7_3jtnv"]
-[ext_resource type="Texture2D" uid="uid://dhbl5uecfva8e" path="res://assets/textures/characters/animated/sprite_10.png" id="8_d0wul"]
-[ext_resource type="Texture2D" uid="uid://dv4ex7sybo2yd" path="res://assets/textures/characters/animated/sprite_11.png" id="9_uy8e5"]
-[ext_resource type="Texture2D" uid="uid://crt7hqpx18p00" path="res://assets/textures/characters/animated/sprite_06.png" id="10_s7pah"]
-[ext_resource type="Texture2D" uid="uid://dan3c4v80q4b6" path="res://assets/textures/characters/animated/sprite_07.png" id="11_7n810"]
-[ext_resource type="Texture2D" uid="uid://dua7ltv28a6eg" path="res://assets/textures/characters/animated/sprite_04.png" id="12_iqbpj"]
 [ext_resource type="Script" path="res://scripts/AnimatedSprite2D.gd" id="13_ry33a"]
-[ext_resource type="Texture2D" uid="uid://cry0adchexxjs" path="res://assets/textures/characters/animated/sprite_05.png" id="13_v873d"]
-[ext_resource type="Texture2D" uid="uid://wshnstio01ae" path="res://assets/textures/characters/animated/sprite_08.png" id="14_jjjpa"]
-[ext_resource type="Texture2D" uid="uid://6cc2kftyk0vs" path="res://assets/textures/characters/animated/sprite_09.png" id="15_l0h5t"]
 [ext_resource type="Script" path="res://scripts/DialogPopup.gd" id="16_x5ruq"]
-[ext_resource type="PackedScene" uid="uid://dg0q6s158wmul" path="res://scenes/npc_example.tscn" id="17_lkpne"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_01o70"]
 texture = ExtResource("1_8vt3i")
@@ -33,7 +20,7 @@ sources/1 = SubResource("TileSetAtlasSource_01o70")
 animations = [{
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("4_6ilo3")
+"texture": null
 }],
 "loop": true,
 "name": &"down",
@@ -41,7 +28,7 @@ animations = [{
 }, {
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("5_ir80a")
+"texture": null
 }],
 "loop": true,
 "name": &"left",
@@ -49,7 +36,7 @@ animations = [{
 }, {
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("6_re817")
+"texture": null
 }],
 "loop": true,
 "name": &"right",
@@ -57,7 +44,7 @@ animations = [{
 }, {
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("7_3jtnv")
+"texture": null
 }],
 "loop": true,
 "name": &"up",
@@ -65,10 +52,10 @@ animations = [{
 }, {
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("8_d0wul")
+"texture": null
 }, {
 "duration": 1.0,
-"texture": ExtResource("9_uy8e5")
+"texture": null
 }],
 "loop": true,
 "name": &"walk_down",
@@ -76,10 +63,10 @@ animations = [{
 }, {
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("10_s7pah")
+"texture": null
 }, {
 "duration": 1.0,
-"texture": ExtResource("11_7n810")
+"texture": null
 }],
 "loop": true,
 "name": &"walk_left",
@@ -87,10 +74,10 @@ animations = [{
 }, {
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("12_iqbpj")
+"texture": null
 }, {
 "duration": 1.0,
-"texture": ExtResource("13_v873d")
+"texture": null
 }],
 "loop": true,
 "name": &"walk_right",
@@ -98,10 +85,10 @@ animations = [{
 }, {
 "frames": [{
 "duration": 1.0,
-"texture": ExtResource("14_jjjpa")
+"texture": null
 }, {
 "duration": 1.0,
-"texture": ExtResource("15_l0h5t")
+"texture": null
 }],
 "loop": true,
 "name": &"walk_up",
@@ -145,7 +132,8 @@ shape = SubResource("CapsuleShape2D_240al")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="CharacterBody2D"]
 sprite_frames = SubResource("SpriteFrames_oirre")
-animation = &"walk_up"
+animation = &"walk_right"
+frame_progress = 0.445554
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="CharacterBody2D"]
 libraries = {
@@ -158,7 +146,6 @@ target_position = Vector2(0, 23)
 [node name="UI" type="CanvasLayer" parent="CharacterBody2D"]
 
 [node name="DialogPopup" type="CanvasLayer" parent="CharacterBody2D/UI"]
-visible = false
 script = ExtResource("16_x5ruq")
 
 [node name="Dialog" type="ColorRect" parent="CharacterBody2D/UI/DialogPopup"]
@@ -170,7 +157,7 @@ anchor_bottom = 1.0
 offset_left = -212.0
 offset_top = -493.0
 offset_right = 98.0
-offset_bottom = -399.0
+offset_bottom = -423.0
 grow_horizontal = 2
 grow_vertical = 0
 color = Color(0.345098, 0.0980392, 0.160784, 1)
@@ -192,23 +179,19 @@ offset_top = 15.0
 offset_right = 295.0
 offset_bottom = 45.0
 theme_override_font_sizes/font_size = 10
-text = "Hello there!!!! Can you see meee"
+text = "Text Here..."
 autowrap_mode = 2
 
 [node name="Response" type="Label" parent="CharacterBody2D/UI/DialogPopup/Dialog"]
 layout_mode = 0
-offset_left = 11.0
-offset_top = 74.0
-offset_right = 301.0
-offset_bottom = 90.0
+offset_left = 5.0
+offset_top = 50.0
+offset_right = 295.0
+offset_bottom = 66.0
 theme_override_colors/font_color = Color(0.839216, 0.764706, 0.462745, 1)
 theme_override_font_sizes/font_size = 10
 text = "Answer"
 horizontal_alignment = 1
 vertical_alignment = 1
-
-[node name="SpawnedNPC" type="Node2D" parent="."]
-
-[node name="NPC" parent="SpawnedNPC" instance=ExtResource("17_lkpne")]
 
 [connection signal="animation_finished" from="CharacterBody2D/AnimationPlayer" to="CharacterBody2D/UI/DialogPopup" method="_on_animation_player_animation_finished"]
