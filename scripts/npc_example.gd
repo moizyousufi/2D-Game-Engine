@@ -12,22 +12,42 @@ var dialog_state = 0
 @export var npc_name = ""
 
 const SPEED = 300.0
-const JUMP_VELOCITY = -400.0
+const JUMP_VELOCITY = -40.0
 
 # Get the gravity from the project settings to be synced with RigidBody nodes.
 var gravity = ProjectSettings.get_setting("physics/2d/default_gravity")
+
+var time = 0
+
+func _process(delta):
+	time += delta
+
+
 
 # initialize variables
 func _ready():
 	animation_sprite.play("idle_down")
 
+
 func _physics_process(delta):
 
 	# Handle jump.
 	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
+		# get it moving upward
 		velocity.y = JUMP_VELOCITY
+		# timer for half a second
+		await get_tree().create_timer(0.5).timeout
+		# get it moving downward
+		velocity.y = 0 - JUMP_VELOCITY
+		# timer for half a second
+		await get_tree().create_timer(0.5).timeout
+		# make it stop moving
+		velocity.y = 0
+		
+		
 
 	move_and_slide()
+
 
 #dialog tree    
 func dialog(response = ""):
